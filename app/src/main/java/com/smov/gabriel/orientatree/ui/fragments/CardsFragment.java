@@ -1,35 +1,37 @@
-package com.smov.gabriel.orientatree.ui;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
-import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
+package com.smov.gabriel.orientatree.ui.fragments;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.MenuItem;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.widget.Toolbar;
+import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
-import com.tfg.marllor.orientatree.R;
 import com.smov.gabriel.orientatree.adapters.ParticipantAdapter;
 import com.smov.gabriel.orientatree.model.Activity;
 import com.smov.gabriel.orientatree.model.Participation;
 import com.smov.gabriel.orientatree.model.Template;
 import com.smov.gabriel.orientatree.model.TemplateType;
+import com.smov.gabriel.orientatree.ui.ParticipantsListActivity;
+import com.tfg.marllor.orientatree.R;
 
 import java.util.ArrayList;
 import java.util.Collections;
 
-public class ParticipantsListActivity extends AppCompatActivity {
+public class CardsFragment extends Fragment {
     private Activity activity;
     private Template template;
 
@@ -41,29 +43,48 @@ public class ParticipantsListActivity extends AppCompatActivity {
     private TextView participantsListparticipants_textView;
 
     // needed to pass it to the adapter so that cards can be clicked and head to a new activity
-    private ParticipantsListActivity participantsListActivity;
+    private CardsFragment cardsFragment;
 
     private FirebaseFirestore db;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public CardsFragment() {
+        // Constructor vacío requerido
+    }
+    public void onCreate(Bundle savedInstanceState)
+    {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_participants_list);
-
+        if (getArguments() != null) {
+            String param1 = getArguments().getString("param1");
+            String param2 = getArguments().getString("param2");
+        }
+    }
+    @Override
+    public View onCreateView(LayoutInflater inflater,
+                             ViewGroup container,
+                             Bundle savedInstanceState)
+    {
+        // Inflate the layout for this fragment
+        return inflater.inflate(R.layout.activity_participants_list,
+                container, false);
+    }
+    @Override
+    public void
+    onViewCreated(@NonNull View view,
+                  @Nullable Bundle savedInstanceState)
+    {
+        super.onViewCreated(view, savedInstanceState);
         // initializing Firebase services
         db = FirebaseFirestore.getInstance();
 
         // binding interface elements
-        participantsList_recyclerView = findViewById(R.id.participantsList_recyclerView);
-        emptyState_layout = findViewById(R.id.peacockHead_emptyState);
-        emptyStateMessage_textView = findViewById(R.id.emptyStateMessage_textView);
-        participantsListparticipants_textView = findViewById(R.id.participantsListparticipants_textView);
+        participantsList_recyclerView = getView().findViewById(R.id.participantsList_recyclerView);
+        emptyState_layout = getView().findViewById(R.id.peacockHead_emptyState);
+        emptyStateMessage_textView = getView().findViewById(R.id.emptyStateMessage_textView);
+        participantsListparticipants_textView = getView().findViewById(R.id.participantsListparticipants_textView);
 
-        participantsListActivity = (ParticipantsListActivity) this;
-
+        cardsFragment = (CardsFragment) this;
         // setting the AppBar
                 // get the activity
-        Intent intent = getIntent();
+        Intent intent = getActivity().getIntent();
         activity = (Activity) intent.getSerializableExtra("activity");
         template = (Template) intent.getSerializableExtra("template");
 
@@ -85,7 +106,7 @@ public class ParticipantsListActivity extends AppCompatActivity {
                             // sort the participants
                             Collections.sort(participations, new Participation());
                             // show or hide the empty state with its message
-                            if(participations.size() < 1) {
+                            if(participations.isEmpty()) {
                                 emptyStateMessage_textView.setText("Parece que esta actividad no tiene participantes");
                                 emptyState_layout.setVisibility(View.VISIBLE);
                             } else {
@@ -97,22 +118,12 @@ public class ParticipantsListActivity extends AppCompatActivity {
                             } else {
                                 participantsListparticipants_textView.setText("Participantes: (" + participations.size() + ")");
                             }
-                            participantAdapter = new ParticipantAdapter( ParticipantsListActivity.this,
+                            participantAdapter = new ParticipantAdapter(getContext(),
                                     participations, template, activity);
                             participantsList_recyclerView.setAdapter(participantAdapter);
-                            participantsList_recyclerView.setLayoutManager(new LinearLayoutManager(ParticipantsListActivity.this));
+                            participantsList_recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
                         }
                     });
         }
     }
-
-    @Override
-        public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-            switch (item.getItemId()) {
-                case android.R.id.home:
-                    this.finish();
-                    return true;
-            }
-            return super.onOptionsItemSelected(item);
-        }
 }

@@ -11,6 +11,7 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
@@ -25,10 +26,14 @@ import com.google.android.gms.maps.model.GroundOverlayOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MapStyleOptions;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
+import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QuerySnapshot;
 import com.tfg.marllor.orientatree.R;
 import com.tfg.marllor.orientatree.databinding.ActivityOrganizerMapBinding;
 import com.smov.gabriel.orientatree.model.Activity;
@@ -122,6 +127,27 @@ public class OrganizerMapActivity extends AppCompatActivity implements OnMapRead
         }
 
         if (template != null) {
+            CollectionReference collectionRef = db.collection("maps");
+            collectionRef.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+
+                public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                    if (task.isSuccessful()) {
+                        // La consulta fue exitosa
+                        QuerySnapshot querySnapshot = task.getResult();
+                        if (querySnapshot != null) {
+                            for (DocumentSnapshot document : querySnapshot.getDocuments()) {
+                                // Procesa cada documento aquí
+                                Object data = document.getData();
+                                templateMap = document.toObject(Map.class);
+                                Log.d("PruebaMapa", "MapID;" + templateMap.getMap_id());
+                            }
+                        }
+                    } else {
+                        // La consulta falló
+                        Log.d("PruebaMapa", "Error getting documents: ", task.getException());
+                    }
+                }
+            });
             db.collection("maps").document(template.getMap_id())
                     .get()
                     .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
@@ -129,6 +155,7 @@ public class OrganizerMapActivity extends AppCompatActivity implements OnMapRead
                         public void onSuccess(DocumentSnapshot documentSnapshot) {
                             // getting the map
                             templateMap = documentSnapshot.toObject(Map.class);
+                            Log.d("PruebaMapa", "HolaCosas" + templateMap.getMap_id());
 
                             // where to center the map at the outset
                             LatLng center_map = new LatLng(templateMap.getCentering_point().getLatitude(),

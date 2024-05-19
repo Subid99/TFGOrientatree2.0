@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
     <!--
          The ACCESS_COARSE/FINE_LOCATION permissions are not required to use
          Google Maps Android API v2, but you must specify either coarse or fine
@@ -21,8 +20,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.OrientaTree">
-
-        <!--
+                <!--
              The API key for Google Maps-based APIs is defined as a string resource.
              (See the file "res/values/google_maps_api.xml").
              Note that the API key is linked to the encryption key used to sign the APK.
@@ -37,7 +35,7 @@
         <activity
             android:name="com.smov.gabriel.orientatree.ui.OrganizerMapActivity"
             android:exported="true"
-            android:label="@string/title_activity_organizer_map"/>
+            android:label="@string/title_activity_organizer_map" />
         <activity
             android:name="com.smov.gabriel.orientatree.ui.CreditsActivity"
             android:exported="true"
@@ -97,11 +95,16 @@
         <activity
             android:name="com.smov.gabriel.orientatree.ui.WelcomeActivity"
             android:exported="true"
-            android:screenOrientation="portrait"/>
+            android:screenOrientation="portrait" />
         <activity
             android:name="com.smov.gabriel.orientatree.ui.LogInActivity"
             android:exported="true"
             android:label="Iniciar sesión"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name="com.smov.gabriel.orientatree.ui.VigilanciaActividadActivity"
+            android:exported="true"
+            android:label="VigilanciaProfesor"
             android:screenOrientation="portrait" />
         <activity
             android:name="com.smov.gabriel.orientatree.ui.SignUpActivity"

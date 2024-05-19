@@ -43,19 +43,19 @@ import de.hdodenhof.circleimageview.CircleImageView;
 public class ParticipantAdapter extends RecyclerView.Adapter<ParticipantAdapter.MyViewHolder> {
 
     private Context context;
-    private android.app.Activity participantsListActivity;
+
     private ArrayList<Participation> participants;
     private int position;
     private Template template;
     private Activity activity;
 
-    public ParticipantAdapter(android.app.Activity pActivity, Context context, ArrayList<Participation> participants,
+    public ParticipantAdapter( Context context, ArrayList<Participation> participants,
                               Template template, Activity activity) {
         this.context = context;
         this.participants = participants;
         this.template = template;
         this.activity = activity;
-        this.participantsListActivity = pActivity;
+
     }
 
     @NonNull
@@ -187,7 +187,7 @@ public class ParticipantAdapter extends RecyclerView.Adapter<ParticipantAdapter.
             intent.putExtra("activity", activity);
             intent.putExtra("template", template);
             intent.putExtra("participantID", participantID);
-            participantsListActivity.startActivityForResult(intent, 1);
+
         }
     }
 

@@ -70,6 +70,24 @@ public class Participation implements Comparator<Participation>, Serializable {
         this.reaches = reaches;
     }
 
+    public String getResults(){
+        String devolver= "";
+        for(int i=0;i<reaches.size();i++){
+            BeaconReached Baliza = reaches.get(i);
+            if(Baliza.isAnswered()){
+                if(Baliza.isAnswer_right()){
+                    devolver = devolver+"✔";
+                }
+                else{
+                    devolver = devolver+"❌";
+                }
+            }
+            else{
+                devolver = devolver+"➖";
+            }
+        }
+        return devolver;
+    }
     @Override
     public int compare(Participation o1, Participation o2) {
         if (o1.isCompleted() && !o2.isCompleted()) {
