@@ -18,6 +18,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.location.Location;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -126,6 +127,7 @@ public class NowActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.v("Hola",this.getClass().getSimpleName());
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_now);
 
@@ -786,7 +788,7 @@ public class NowActivity extends AppCompatActivity {
     }
 
     private void updateUIMap() {
-        Intent intent = new Intent(NowActivity.this, MapActivity.class);
+        Intent intent = new Intent(NowActivity.this, MapParticipantActivity.class);
         intent.putExtra("template", template);
         intent.putExtra("activity", activity);
         startActivity(intent);

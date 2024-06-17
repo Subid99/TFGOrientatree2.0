@@ -58,7 +58,7 @@ import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class MapActivity extends AppCompatActivity implements OnMapReadyCallback/*, GoogleMap.OnMapLongClickListener*/ {
+public class MapParticipantActivity extends AppCompatActivity implements OnMapReadyCallback/*, GoogleMap.OnMapLongClickListener*/ {
 
     private TextView reachesMap_textView, map_timer_textView,
             mapBeaconsBadge_textView;
@@ -97,6 +97,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.v("Hola",this.getClass().getSimpleName());
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_map);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
@@ -168,7 +169,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                                                     timerTask = new TimerTask() {
                                                         @Override
                                                         public void run() {
-                                                            MapActivity.this.runOnUiThread(new Runnable() {
+                                                            MapParticipantActivity.this.runOnUiThread(new Runnable() {
                                                                 @Override
                                                                 public void run() {
                                                                     time++;
@@ -304,7 +305,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     }
 
     private void updateUIReaches(Activity activity) {
-        Intent intent = new Intent(MapActivity.this, ReachesActivity.class);
+        Intent intent = new Intent(MapParticipantActivity.this, ReachesActivity.class);
         intent.putExtra("activity", activity);
         intent.putExtra("template", template);
         startActivity(intent);

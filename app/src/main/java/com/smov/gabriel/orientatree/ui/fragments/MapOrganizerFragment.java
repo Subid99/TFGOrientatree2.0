@@ -1,7 +1,8 @@
-package com.smov.gabriel.orientatree.ui;
+package com.smov.gabriel.orientatree.ui.fragments;
 
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import android.content.Context;
@@ -12,8 +13,10 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -34,6 +37,8 @@ import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.smov.gabriel.orientatree.ui.OrganizerMapActivity;
+import com.smov.gabriel.orientatree.ui.ParticipantsListActivity;
 import com.tfg.marllor.orientatree.R;
 import com.tfg.marllor.orientatree.databinding.ActivityOrganizerMapBinding;
 import com.smov.gabriel.orientatree.model.Activity;
@@ -43,8 +48,7 @@ import com.smov.gabriel.orientatree.model.Template;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-
-public class OrganizerMapActivity extends AppCompatActivity implements OnMapReadyCallback {
+public class MapOrganizerFragment extends Fragment  implements OnMapReadyCallback{
 
     private GoogleMap mMap;
     private ActivityOrganizerMapBinding binding;
@@ -59,29 +63,31 @@ public class OrganizerMapActivity extends AppCompatActivity implements OnMapRead
     private FirebaseFirestore db;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        Log.v("Hola",this.getClass().getSimpleName());
-        super.onCreate(savedInstanceState);
+    public View onCreateView(LayoutInflater inflater,
+                             ViewGroup container,
+                             Bundle savedInstanceState)
+    {
+        // Inflate the layout for this fragment
+        return inflater.inflate(R.layout.activity_organizer_map,
+                container, false);
+    }
+    public void onViewCreated(@NonNull View view,
+                              @Nullable Bundle savedInstanceState) {
 
-        binding = ActivityOrganizerMapBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+        SupportMapFragment mapFragment = (SupportMapFragment) getChildFragmentManager()
                 .findFragmentById(R.id.organizer_map);
         mapFragment.getMapAsync(this);
 
         db = FirebaseFirestore.getInstance();
 
-        toolbar = findViewById(R.id.organizerMap_toolbar);
-        organizerMapParticipants_fab = findViewById(R.id.organizerMapParticipants_fab);
-
-        // set the toolbar
-        setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        toolbar = view.findViewById(R.id.organizerMap_toolbar);
+        organizerMapParticipants_fab = view.findViewById(R.id.organizerMapParticipants_fab);
 
         // get the activity
-        Intent intent = getIntent();
+        Intent intent = getActivity().getIntent();
         activity = (Activity) intent.getSerializableExtra("activity");
         template = (Template) intent.getSerializableExtra("template");
 
@@ -98,7 +104,7 @@ public class OrganizerMapActivity extends AppCompatActivity implements OnMapRead
                 if (template != null && activity != null) {
                     updateUIParticipants();
                 } else {
-                    Toast.makeText(OrganizerMapActivity.this, "No se pudo completar la acción. Sal y vuelve a intentarlo", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(view.getContext(), "No se pudo completar la acción. Sal y vuelve a intentarlo", Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -119,12 +125,12 @@ public class OrganizerMapActivity extends AppCompatActivity implements OnMapRead
 
         // setting styles...
         try {
-            boolean success = mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, R.raw.map_style));
+            boolean success = mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(this.getContext(), R.raw.map_style));
             if (!success) {
-                Toast.makeText(this, "Algo salió mal al configurar el mapa", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), "Algo salió mal al configurar el mapa", Toast.LENGTH_SHORT).show();
             }
         } catch (Resources.NotFoundException e) {
-            Toast.makeText(this, "Algo salió mal al configurar el mapa", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), "Algo salió mal al configurar el mapa", Toast.LENGTH_SHORT).show();
         }
 
         if (template != null) {
@@ -156,12 +162,14 @@ public class OrganizerMapActivity extends AppCompatActivity implements OnMapRead
                         public void onSuccess(DocumentSnapshot documentSnapshot) {
                             // getting the map
                             templateMap = documentSnapshot.toObject(Map.class);
+                            Log.d("PruebaMapa", "HolaCosas" + templateMap.getMap_id());
+
                             // where to center the map at the outset
                             LatLng center_map = new LatLng(templateMap.getCentering_point().getLatitude(),
                                     templateMap.getCentering_point().getLongitude());
 
                             // get the map image from a file and reduce its size
-                            ContextWrapper cw = new ContextWrapper(getApplicationContext());
+                            ContextWrapper cw = new ContextWrapper(getContext());
                             File directory = cw.getDir("imageDir", Context.MODE_PRIVATE);
                             //File mypath = new File(directory, activity.getId() + ".png");
                             File mypath = new File(directory, template.getTemplate_id() + ".png");
@@ -200,7 +208,7 @@ public class OrganizerMapActivity extends AppCompatActivity implements OnMapRead
                         }
                     });
         } else {
-            Toast.makeText(this, "Algo salió mal al cargar el mapa", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), "Algo salió mal al cargar el mapa", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -242,12 +250,13 @@ public class OrganizerMapActivity extends AppCompatActivity implements OnMapRead
             o2.inSampleSize = scale;
             return BitmapFactory.decodeStream(new FileInputStream(f), null, o2);
         } catch (FileNotFoundException e) {
-            Toast.makeText(this, "Algo salió mal al cargar el mapa", Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
+            //Toast.makeText(this, "Algo salió mal al cargar el mapa", Toast.LENGTH_SHORT).show();
         }
         return null;
     }
 
-    @Override
+    /*@Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         switch (item.getItemId()) {
             case android.R.id.home:
@@ -255,10 +264,10 @@ public class OrganizerMapActivity extends AppCompatActivity implements OnMapRead
                 return true;
         }
         return super.onOptionsItemSelected(item);
-    }
+    }*/
 
     private void updateUIParticipants() {
-        Intent intent = new Intent(OrganizerMapActivity.this, ParticipantsListActivity.class);
+        Intent intent = new Intent(getActivity(), ParticipantsListActivity.class);
         intent.putExtra("activity", activity);
         intent.putExtra("template", template);
         startActivity(intent);

@@ -67,7 +67,7 @@
             android:exported="true"
             android:screenOrientation="portrait" />
         <activity
-            android:name="com.smov.gabriel.orientatree.ui.MapActivity"
+            android:name="com.smov.gabriel.orientatree.ui.MapParticipantActivity"
             android:exported="true"
             android:label="@string/title_activity_map"
             android:screenOrientation="portrait" />

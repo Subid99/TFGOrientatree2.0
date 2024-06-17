@@ -71,6 +71,7 @@ public class FindTemplateActivity extends AppCompatActivity implements Navigatio
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.v("Hola",this.getClass().getSimpleName());
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_find_template);
 
