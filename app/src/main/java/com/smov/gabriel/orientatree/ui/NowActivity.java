@@ -259,8 +259,8 @@ public class NowActivity extends AppCompatActivity {
                                     // always enable see map button
                                     nowCredentials_button.setEnabled(true);
                                     nowCredentials_button.setVisibility(View.VISIBLE);
-                                    nowMap_button.setEnabled(true);
-                                    nowMap_button.setVisibility(View.VISIBLE);
+                                    //nowMap_button.setEnabled(true);
+                                    //nowMap_button.setVisibility(View.VISIBLE);
                                     // 2.1) check if we need to change the text of the see participants FAB
                                     switch (activityTime) {
                                         case PAST:
@@ -781,7 +781,7 @@ public class NowActivity extends AppCompatActivity {
     }
 
     private void updateUIParticipants() {
-        Intent intent = new Intent(NowActivity.this, ParticipantsListActivity.class);
+        Intent intent = new Intent(NowActivity.this, VigilanciaActividadActivity.class);
         intent.putExtra("activity", activity);
         intent.putExtra("template", template);
         startActivity(intent);
@@ -826,6 +826,7 @@ public class NowActivity extends AppCompatActivity {
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         switch (requestCode) {
             case FINE_LOCATION_ACCESS_REQUEST_CODE:
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {

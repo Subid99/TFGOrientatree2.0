@@ -5,7 +5,8 @@
     android:id="@+id/constraintLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.main.Fragments.ListaFragment">
+    tools:context="com.smov.gabriel.orientatree.ui.fragments.ListaFragment">
+
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -23,7 +24,8 @@
 
                 <!-- Columna 1 -->
                 <TextView
-                    android:layout_width="wrap_content"
+                    android:id="@+id/Nº"
+                    android:layout_width="10pt"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center"
@@ -33,7 +35,8 @@
 
                 <!-- Columna 2 -->
                 <TextView
-                    android:layout_width="wrap_content"
+                    android:id="@+id/Nombre"
+                    android:layout_width="50pt"
                     android:layout_height="match_parent"
                     android:layout_weight="2"
                     android:gravity="center"
@@ -43,7 +46,8 @@
 
                 <!-- Columna 3 -->
                 <TextView
-                    android:layout_width="wrap_content"
+                    android:id="@+id/EstadoParticipacion"
+                    android:layout_width="50pt"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:gravity="center"
@@ -53,7 +57,8 @@
 
                 <!-- Columna 4 -->
                 <TextView
-                    android:layout_width="wrap_content"
+                    android:id="@+id/Balizas"
+                    android:layout_width="20pt"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:gravity="center"
@@ -61,7 +66,29 @@
                     android:text="Balizas"
                     android:textSize="20sp" />
             </TableRow>
+
+
+            <TableLayout
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <!--RecyclerView-->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/recycleView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    tools:listitem="@layout/items_list"/>
+
+            </TableLayout>
+
+
         </TableLayout>
     </ScrollView>
-
+    <include
+        android:id="@+id/peacockHead_emptyState"
+        layout="@layout/no_activities_id"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
 </androidx.constraintlayout.widget.ConstraintLayout>

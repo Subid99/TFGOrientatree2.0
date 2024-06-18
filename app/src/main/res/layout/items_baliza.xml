@@ -1,0 +1,50 @@
+<TableLayout
+xmlns:android="http://schemas.android.com/apk/res/android"
+xmlns:tools="http://schemas.android.com/tools"
+xmlns:app="http://schemas.android.com/apk/res-auto"
+android:id="@+id/llMain"
+android:layout_width="match_parent"
+android:layout_height="wrap_content"
+android:gravity="center_vertical"
+android:orientation="horizontal"
+android:padding="10dp">
+<TableRow
+    android:id="@+id/Row"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+    <!--TextView for displaying Name -->
+
+    <!-- Columna 2 -->
+    <TextView
+        android:id="@+id/Nombre"
+        android:layout_width="50pt"
+        android:layout_height="match_parent"
+        android:layout_weight="2"
+        android:gravity="center"
+        android:padding="8dp"
+        android:text="Nombre"
+        android:textSize="20sp" />
+
+    <!-- Columna 3 -->
+    <TextView
+        android:id="@+id/EstadoBaliza"
+        android:layout_width="50pt"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:padding="8dp"
+        android:text="Estado"
+        android:textSize="20sp" />
+
+    <!-- Columna 4 -->
+    <TextView
+        android:id="@+id/NumeroBaliza"
+        android:layout_width="20pt"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:padding="8dp"
+        android:text="NBalizas"
+        android:textSize="20sp" />
+</TableRow>
+</TableLayout>

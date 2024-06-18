@@ -73,7 +73,7 @@ public class OrganizerMapActivity extends AppCompatActivity implements OnMapRead
 
         db = FirebaseFirestore.getInstance();
 
-        toolbar = findViewById(R.id.organizerMap_toolbar);
+        //toolbar = findViewById(R.id.organizerMap_toolbar);
         organizerMapParticipants_fab = findViewById(R.id.organizerMapParticipants_fab);
 
         // set the toolbar
