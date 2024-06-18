@@ -83,32 +83,13 @@ public class MapOrganizerFragment extends Fragment  implements OnMapReadyCallbac
 
         db = FirebaseFirestore.getInstance();
 
-        toolbar = view.findViewById(R.id.organizerMap_toolbar);
-        organizerMapParticipants_fab = view.findViewById(R.id.organizerMapParticipants_fab);
+                organizerMapParticipants_fab = view.findViewById(R.id.organizerMapParticipants_fab);
 
         // get the activity
         Intent intent = getActivity().getIntent();
         activity = (Activity) intent.getSerializableExtra("activity");
         template = (Template) intent.getSerializableExtra("template");
-
-        if(activity != null && template != null) {
-            // if these attributes are not null, it means that we came from the now activity
-            // in which case we should offer the option of watching the participants
-            organizerMapParticipants_fab.setEnabled(true);
-            organizerMapParticipants_fab.setVisibility(View.VISIBLE);
-        } // in other case, we come from the template and we don't have to give that option
-
-        organizerMapParticipants_fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (template != null && activity != null) {
-                    updateUIParticipants();
-                } else {
-                    Toast.makeText(view.getContext(), "No se pudo completar la acción. Sal y vuelve a intentarlo", Toast.LENGTH_SHORT).show();
-                }
             }
-        });
-    }
 
     /**
      * Manipulates the map once available.
@@ -265,11 +246,4 @@ public class MapOrganizerFragment extends Fragment  implements OnMapReadyCallbac
         }
         return super.onOptionsItemSelected(item);
     }*/
-
-    private void updateUIParticipants() {
-        Intent intent = new Intent(getActivity(), ParticipantsListActivity.class);
-        intent.putExtra("activity", activity);
-        intent.putExtra("template", template);
-        startActivity(intent);
-    }
 }
