@@ -29,14 +29,22 @@ import com.google.android.gms.maps.model.GroundOverlayOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MapStyleOptions;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.GeoPoint;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.smov.gabriel.orientatree.model.Participation;
+import com.smov.gabriel.orientatree.model.ParticipationState;
 import com.smov.gabriel.orientatree.ui.OrganizerMapActivity;
 import com.smov.gabriel.orientatree.ui.ParticipantsListActivity;
 import com.tfg.marllor.orientatree.R;
@@ -48,6 +56,8 @@ import com.smov.gabriel.orientatree.model.Template;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
+
 public class MapOrganizerFragment extends Fragment  implements OnMapReadyCallback{
 
     private GoogleMap mMap;
@@ -59,7 +69,7 @@ public class MapOrganizerFragment extends Fragment  implements OnMapReadyCallbac
     private Map templateMap;
     private Template template;
     private Activity activity;
-
+    private ArrayList<Marker> puntos;
     private FirebaseFirestore db;
 
     @Override
@@ -89,6 +99,7 @@ public class MapOrganizerFragment extends Fragment  implements OnMapReadyCallbac
         Intent intent = getActivity().getIntent();
         activity = (Activity) intent.getSerializableExtra("activity");
         template = (Template) intent.getSerializableExtra("template");
+        puntos = new ArrayList<Marker>();
             }
 
     /**
@@ -186,6 +197,37 @@ public class MapOrganizerFragment extends Fragment  implements OnMapReadyCallbac
                                             templateMap.getMap_corners().get(1).getLongitude())  // NE bounds
                             );
                             mMap.setLatLngBoundsForCameraTarget(map_bounds);
+                            LatLng sydney = new LatLng(41.647527, -4.729964);
+                            Log.v("Mapita",sydney.toString());
+                            mMap.addMarker(new MarkerOptions().position(sydney));
+                            db.collection("activities").document(activity.getId())
+                                    .collection("participations")
+                                    .addSnapshotListener(new EventListener<QuerySnapshot>() {
+                                        @Override
+                                        public void onEvent(@Nullable QuerySnapshot value,
+                                                            @Nullable FirebaseFirestoreException e) {
+                                            if (e != null) {
+                                                return;
+                                            }
+                                            for(int i = 0; i<puntos.size();i++){
+                                                puntos.get(i).remove();
+                                            }
+                                            puntos.clear();
+                                            ArrayList <Participation> participations = new ArrayList<Participation>();
+                                            for (QueryDocumentSnapshot doc : value) {
+                                                Participation participation = doc.toObject(Participation.class);
+                                                participations.add(participation);
+                                            }
+                                            for(int i = 0; i<participations.size();i++){
+                                                if(participations.get(i).getState()== ParticipationState.NOW){
+                                                GeoPoint punto = participations.get(i).getLastLocation();
+                                                if (punto!= null){
+                                                LatLng participantepunto = new LatLng(punto.getLatitude(),punto.getLongitude());
+                                                Marker marca = mMap.addMarker(new MarkerOptions().position(participantepunto));
+                                                puntos.add(marca);}}
+                                            }
+                                            }
+                                        });
                         }
                     });
         } else {

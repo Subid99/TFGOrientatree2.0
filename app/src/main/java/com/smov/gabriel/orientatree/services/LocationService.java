@@ -322,6 +322,10 @@ public class LocationService extends Service {
                 .collection("participations").document(userID)
                 .collection("locations").document(locationID)
                 .set(location);
+
+        db.collection("activities").document(activity.getId())
+                .collection("participations").document(userID)
+                .update("lastLocation",point);
     }
 
     private void playScore(double lat1, double lng1, Date current_time) {
