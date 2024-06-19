@@ -98,7 +98,7 @@
                                 android:layout_height="wrap_content"
                                 android:enabled="false"
                                 android:text="ir al mapa"
-                                android:visibility="gone" />
+                                android:visibility="visible" />
 
                         </LinearLayout>
 

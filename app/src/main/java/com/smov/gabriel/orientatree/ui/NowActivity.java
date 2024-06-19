@@ -259,8 +259,8 @@ public class NowActivity extends AppCompatActivity {
                                     // always enable see map button
                                     nowCredentials_button.setEnabled(true);
                                     nowCredentials_button.setVisibility(View.VISIBLE);
-                                    //nowMap_button.setEnabled(true);
-                                    //nowMap_button.setVisibility(View.VISIBLE);
+                                    nowMap_button.setEnabled(true);
+                                    nowMap_button.setVisibility(View.VISIBLE);
                                     // 2.1) check if we need to change the text of the see participants FAB
                                     switch (activityTime) {
                                         case PAST:
