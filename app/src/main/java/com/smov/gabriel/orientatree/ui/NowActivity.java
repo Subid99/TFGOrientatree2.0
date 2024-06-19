@@ -259,6 +259,7 @@ public class NowActivity extends AppCompatActivity {
                                     // always enable see map button
                                     nowCredentials_button.setEnabled(true);
                                     nowCredentials_button.setVisibility(View.VISIBLE);
+                                    Log.v("NowAc","Estoy en lo de habilitar el mapita");
                                     nowMap_button.setEnabled(true);
                                     nowMap_button.setVisibility(View.VISIBLE);
                                     // 2.1) check if we need to change the text of the see participants FAB
@@ -534,7 +535,74 @@ public class NowActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (template != null && activity != null) {
-                    updateUIParticipants();
+                    if(mapDownloaded()) {
+                        // if the map is already downloaded
+                        updateUIParticipants();
+                    } else {
+                        // if the map is not yet downloaded
+                        final ProgressDialog pd = new ProgressDialog(NowActivity.this);
+                        pd.setTitle("Cargando el mapa...");
+                        pd.show();
+                        StorageReference reference = storageReference.child("maps/" + activity.getTemplate() + ".png");
+                        try {
+                            // try to read the map image from Firebase into a file
+                            File localFile = File.createTempFile("images", "png");
+                            reference.getFile(localFile)
+                                    .addOnSuccessListener(new OnSuccessListener<FileDownloadTask.TaskSnapshot>() {
+                                        @Override
+                                        public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot) {
+                                            // we downloaded the map successfully
+                                            // read the downloaded file into a bitmap
+                                            Bitmap bmp = BitmapFactory.decodeFile(localFile.getAbsolutePath());
+                                            // save the bitmap to a file
+                                            ContextWrapper cw = new ContextWrapper(getApplicationContext());
+                                            // path to /data/data/yourapp/app_data/imageDir
+                                            File directory = cw.getDir("imageDir", Context.MODE_PRIVATE);
+                                            // Create imageDir
+                                            //File mypath = new File(directory, activity.getId() + ".png");
+                                            File mypath = new File(directory, activity.getTemplate() + ".png");
+                                            FileOutputStream fos = null;
+                                            try {
+                                                fos = new FileOutputStream(mypath);
+                                                // Use the compress method on the BitMap object to write image to the OutputStream
+                                                bmp.compress(Bitmap.CompressFormat.PNG, 100, fos);
+                                                updateUIParticipants();
+                                            } catch (Exception e) {
+                                                e.printStackTrace();
+                                                showSnackBar("Algo salió mal al cargar el mapa. Sal y vuelve a intentarlo.");
+                                            } finally {
+                                                try {
+                                                    fos.close();
+                                                } catch (IOException e) {
+                                                    e.printStackTrace();
+                                                }
+                                            }
+                                            pd.dismiss();
+                                        }
+                                    })
+                                    .addOnFailureListener(new OnFailureListener() {
+                                        @Override
+                                        public void onFailure(@NonNull Exception e) {
+                                            pd.dismiss();
+                                            showSnackBar("Algo salió mal al cargar el mapa. Sal y vuelve a intentarlo.");
+                                        }
+                                    })
+                                    .addOnProgressListener(new OnProgressListener<FileDownloadTask.TaskSnapshot>() {
+                                        @Override
+                                        public void onProgress(@NonNull @NotNull FileDownloadTask.TaskSnapshot snapshot) {
+                                            double progressPercent = (100.00 * snapshot.getBytesTransferred() / snapshot.getTotalByteCount());
+                                            if (progressPercent <= 90) {
+                                                pd.setMessage("Progreso: " + (int) progressPercent + "%");
+                                            } else {
+                                                pd.setMessage("Descargado. Espera unos instantes mientras el mapa se guarda en el dispositivo");
+                                            }
+                                        }
+                                    });
+                        } catch (IOException e) {
+                            pd.dismiss();
+                            showSnackBar("Algo salió mal al cargar el mapa. Sal y vuelve a intentarlo.");
+                        }
+                    }
                 } else {
                     Toast.makeText(NowActivity.this, "No se pudo completar la acción. Sal y vuelve a intentarlo", Toast.LENGTH_SHORT).show();
                 }
