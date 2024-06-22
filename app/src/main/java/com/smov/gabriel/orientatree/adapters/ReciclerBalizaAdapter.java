@@ -1,17 +1,20 @@
 package com.smov.gabriel.orientatree.adapters;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TableRow;
 import android.widget.TextView;
 
 import androidx.recyclerview.widget.RecyclerView;
 
 
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.material.tabs.TabLayout;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.smov.gabriel.orientatree.model.Activity;
@@ -19,6 +22,8 @@ import com.smov.gabriel.orientatree.model.Beacon;
 import com.smov.gabriel.orientatree.model.BeaconReached;
 import com.smov.gabriel.orientatree.model.Template;
 import com.smov.gabriel.orientatree.model.TemplateType;
+import com.smov.gabriel.orientatree.ui.ChallengeActivity;
+import com.smov.gabriel.orientatree.ui.fragments.PopUpBalizas;
 import com.tfg.marllor.orientatree.R;
 
 import java.util.ArrayList;
@@ -85,21 +90,39 @@ public class ReciclerBalizaAdapter extends RecyclerView.Adapter<ReciclerBalizaAd
             holder.estadoBaliza.setTextColor(Color.GRAY);
         }
         else if(currentBeacon.isAnswer_right()) {
-            holder.estadoBaliza.setText("Respondida");
-            holder.estadoBaliza.setTextColor(Color.GREEN);
+            holder.estadoBaliza.setText("Acierto");
+            holder.estadoBaliza.setTextColor(Color.parseColor("#008000"));
         } else if (!currentBeacon.isAnswer_right()) {
-            holder.estadoBaliza.setText("Respondida");
+            holder.estadoBaliza.setText("Error");
             holder.estadoBaliza.setTextColor(Color.RED);
         }
 
         holder.NumeroBaliza.setText(String.valueOf(position+1));
-    }
+        holder.FilaBaliza.setOnClickListener(new View.OnClickListener() {
 
+            @Override
+            public void onClick(View v) {
+                if (template.getType() == TemplateType.EDUCATIVA /*&& !reach.isGoal()*/) {
+                    // if template DEPORTIVA we don't do anything
+                    // same if it is goal
+                    updateUIChallengeActivity(beaconID, activity);
+                }
+            }
+        });
+    }
+    private void updateUIChallengeActivity(String beaconID, Activity activity) {
+        Intent intent = new Intent(context, ChallengeActivity.class);
+        intent.putExtra("beaconID", beaconID);
+        intent.putExtra("activity", activity);
+        intent.putExtra("participantID", participantID);
+        context.startActivity(intent);
+    }
     // This class defines the ViewHolder object for each item in the RecyclerView
     public static class MyViewHolder extends RecyclerView.ViewHolder {
         private TextView nombre;
         private TextView estadoBaliza;
         private TextView NumeroBaliza;
+        private TableRow FilaBaliza;
         FirebaseFirestore db;
 
         public MyViewHolder(View itemView) {
@@ -108,6 +131,7 @@ public class ReciclerBalizaAdapter extends RecyclerView.Adapter<ReciclerBalizaAd
             nombre = itemView.findViewById(R.id.Nombre);
             estadoBaliza = itemView.findViewById(R.id.EstadoBaliza);
             NumeroBaliza = itemView.findViewById(R.id.NumeroBaliza);
+            FilaBaliza = itemView.findViewById(R.id.FilaBaliza);
         }
     }
 

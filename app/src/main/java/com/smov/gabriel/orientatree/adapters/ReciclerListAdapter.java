@@ -95,6 +95,7 @@ public class ReciclerListAdapter extends RecyclerView.Adapter<ReciclerListAdapte
                             BeaconReached beaconReached = documentSnapshot.toObject(BeaconReached.class);
                             beaconsReached.add(beaconReached);
                         }
+                        Collections.sort(beaconsReached, new BeaconReached());
                         Collections.reverse(beaconsReached);
                         currentParticipation.setReaches(beaconsReached);
                         holder.Balizas.setText(currentParticipation.getResults());

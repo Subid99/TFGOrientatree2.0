@@ -197,9 +197,6 @@ public class MapOrganizerFragment extends Fragment  implements OnMapReadyCallbac
                                             templateMap.getMap_corners().get(1).getLongitude())  // NE bounds
                             );
                             mMap.setLatLngBoundsForCameraTarget(map_bounds);
-                            LatLng sydney = new LatLng(41.647527, -4.729964);
-                            Log.v("Mapita",sydney.toString());
-                            mMap.addMarker(new MarkerOptions().position(sydney));
                             db.collection("activities").document(activity.getId())
                                     .collection("participations")
                                     .addSnapshotListener(new EventListener<QuerySnapshot>() {
