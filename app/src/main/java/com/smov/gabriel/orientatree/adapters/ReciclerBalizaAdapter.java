@@ -93,7 +93,7 @@ public class ReciclerBalizaAdapter extends RecyclerView.Adapter<ReciclerBalizaAd
             holder.estadoBaliza.setText("Acierto");
             holder.estadoBaliza.setTextColor(Color.parseColor("#008000"));
         } else if (!currentBeacon.isAnswer_right()) {
-            holder.estadoBaliza.setText("Error");
+            holder.estadoBaliza.setText("Fallo");
             holder.estadoBaliza.setTextColor(Color.RED);
         }
 

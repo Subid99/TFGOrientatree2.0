@@ -41,7 +41,7 @@ public class VigilanciaActividadActivity extends AppCompatActivity {
         ViewPagerAdapter adaptador = new ViewPagerAdapter(getSupportFragmentManager());
         adaptador.addFragment(MapaFragment, "Mapa");
         adaptador.addFragment(CardsFragment, "General");
-        adaptador.addFragment(ListaFragment, "Lista");
+        adaptador.addFragment(ListaFragment, "Más Info");
         //adaptador.addFragment(, "pruebaCards");
         ViewPager viewPager = binding.viewpager;
         viewPager.setAdapter(adaptador);
