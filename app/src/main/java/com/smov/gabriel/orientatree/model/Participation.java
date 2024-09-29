@@ -76,7 +76,7 @@ public class Participation implements Comparator<Participation>, Serializable {
     public void setLastLocation(GeoPoint lastLocation){ this.lastLocation = lastLocation;}
     public GeoPoint getLastLocation(){ return lastLocation;}
 
-    public String getResults(){
+    public String obtenerResultados(){
         String devolver= "";
         if(reaches!= null){
         for(int i=0;i<reaches.size();i++){

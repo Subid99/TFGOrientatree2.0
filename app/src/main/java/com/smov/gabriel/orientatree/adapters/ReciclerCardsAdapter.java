@@ -84,7 +84,7 @@ public class ReciclerCardsAdapter extends RecyclerView.Adapter<ReciclerCardsAdap
                                 Glide.with(context)
                                         .load(ref)
                                         .diskCacheStrategy(DiskCacheStrategy.NONE ) // prevent caching
-                                        .skipMemoryCache(true) // prevent caching
+                                        .skipMemoryCache(false) // prevent caching
                                         .into(holder.participantImageView);
                             }
                         }
@@ -108,7 +108,7 @@ public class ReciclerCardsAdapter extends RecyclerView.Adapter<ReciclerCardsAdap
                         Collections.sort(beaconsReached, new BeaconReached());
                         Collections.reverse(beaconsReached);
                         currentParticipation.setReaches(beaconsReached);
-                        holder.Balizas.setText(currentParticipation.getResults());
+                        holder.Balizas.setText(currentParticipation.obtenerResultados());
                     }
                 });
 

@@ -21,7 +21,12 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.OrientaTree">
-                <!--
+        <activity
+            android:name="com.smov.gabriel.orientatree.ui.ParticipantActivity2"
+            android:exported="false"
+            android:label="@string/title_activity_participant2"
+            android:theme="@style/Theme.OrientaTree.NoActionBar" />
+        <!--
              The API key for Google Maps-based APIs is defined as a string resource.
              (See the file "res/values/google_maps_api.xml").
              Note that the API key is linked to the encryption key used to sign the APK.

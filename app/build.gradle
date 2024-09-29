@@ -63,3 +63,9 @@ dependencies {
     // geofencing
     implementation 'com.google.android.gms:play-services-location:21.1.0'
 }
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}

@@ -12,6 +12,7 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
@@ -197,6 +198,12 @@ public class MapOrganizerFragment extends Fragment  implements OnMapReadyCallbac
                                             templateMap.getMap_corners().get(1).getLongitude())  // NE bounds
                             );
                             mMap.setLatLngBoundsForCameraTarget(map_bounds);
+                            final Handler handler = new Handler();
+                            final int delay = 5000; // 5000 milisegundos = 5 segundos
+
+                            handler.postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
                             db.collection("activities").document(activity.getId())
                                     .collection("participations")
                                     .addSnapshotListener(new EventListener<QuerySnapshot>() {
@@ -225,6 +232,9 @@ public class MapOrganizerFragment extends Fragment  implements OnMapReadyCallbac
                                             }
                                             }
                                         });
+                                    handler.postDelayed(this, delay); // Repetir cada x segundos
+                                }
+                            }, delay);
                         }
                     });
         } else {
