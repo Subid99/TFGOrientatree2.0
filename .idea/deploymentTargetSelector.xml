@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2024-09-29T12:35:46.913424Z">
+        <DropdownSelection timestamp="2025-05-28T21:10:06.361435Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\mllra\.android\avd\Copy_of_Higinio.avd" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\mllra\.android\avd\Medium_Phone_2.avd" />
             </handle>
           </Target>
         </DropdownSelection>

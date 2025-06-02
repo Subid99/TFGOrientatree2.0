@@ -35,13 +35,12 @@ public class VigilanciaActividadActivity extends AppCompatActivity {
         template = (Template) intent.getSerializableExtra("template");
         MapaFragment = new MapOrganizerFragment();
         CardsFragment = new CardsFragment();
-        ListaFragment = new ListaFragment();
+
         binding = VigilanciaActividadActivityBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         ViewPagerAdapter adaptador = new ViewPagerAdapter(getSupportFragmentManager());
         adaptador.addFragment(MapaFragment, "Mapa");
         adaptador.addFragment(CardsFragment, "General");
-        adaptador.addFragment(ListaFragment, "Más Info");
         //adaptador.addFragment(, "pruebaCards");
         ViewPager viewPager = binding.viewpager;
         viewPager.setAdapter(adaptador);

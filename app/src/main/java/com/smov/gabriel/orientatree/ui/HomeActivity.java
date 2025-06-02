@@ -99,7 +99,7 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
                 //At this point you should start the login activity and finish this one
                 updateUIIdentification();
             }
-        }, intentFilter);
+        }, intentFilter,Context.RECEIVER_NOT_EXPORTED);
         //** **//
 
         mAuth = FirebaseAuth.getInstance();

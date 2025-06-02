@@ -47,7 +47,7 @@
                 android:textSize="20sp"
                 tools:text="Name" />
 
-            <!--TextView for displaying Email -->
+
 
             <TextView
                 android:id="@+id/EstadoParticipacion"
@@ -57,7 +57,14 @@
                 android:textColor="#454545"
                 android:textSize="16sp"
                 tools:text="EstadoParticipacion" />
-
+            <TextView
+                android:id="@+id/Tiempo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/black"
+                android:textSize="10sp"
+                tools:text="Inicio --:--:--" />
+            <!--TextView for displaying Email -->
             <TextView
                 android:id="@+id/Balizas"
                 android:layout_width="match_parent"

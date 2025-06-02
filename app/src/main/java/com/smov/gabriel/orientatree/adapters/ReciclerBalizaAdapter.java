@@ -26,7 +26,11 @@ import com.smov.gabriel.orientatree.ui.ChallengeActivity;
 import com.smov.gabriel.orientatree.ui.fragments.PopUpBalizas;
 import com.tfg.marllor.orientatree.R;
 
+import java.sql.Time;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 
 public class ReciclerBalizaAdapter extends RecyclerView.Adapter<ReciclerBalizaAdapter.MyViewHolder> {
     private Context context;
@@ -49,7 +53,8 @@ public class ReciclerBalizaAdapter extends RecyclerView.Adapter<ReciclerBalizaAd
 
 
     }
-
+    String pattern = "HH:mm:ss";
+    DateFormat df = new SimpleDateFormat(pattern);
     // This method creates a new ViewHolder object for each item in the RecyclerView
     @Override
     public MyViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
@@ -96,7 +101,8 @@ public class ReciclerBalizaAdapter extends RecyclerView.Adapter<ReciclerBalizaAd
             holder.estadoBaliza.setText("Fallo");
             holder.estadoBaliza.setTextColor(Color.RED);
         }
-
+        String llegada = df.format(currentBeacon.getReachMoment());
+        holder.Llegada.setText(llegada.toString());
         holder.NumeroBaliza.setText(String.valueOf(position+1));
         holder.FilaBaliza.setOnClickListener(new View.OnClickListener() {
 
@@ -122,6 +128,8 @@ public class ReciclerBalizaAdapter extends RecyclerView.Adapter<ReciclerBalizaAd
         private TextView nombre;
         private TextView estadoBaliza;
         private TextView NumeroBaliza;
+
+        private TextView Llegada;
         private TableRow FilaBaliza;
         FirebaseFirestore db;
 
@@ -132,6 +140,7 @@ public class ReciclerBalizaAdapter extends RecyclerView.Adapter<ReciclerBalizaAd
             estadoBaliza = itemView.findViewById(R.id.EstadoBaliza);
             NumeroBaliza = itemView.findViewById(R.id.NumeroBaliza);
             FilaBaliza = itemView.findViewById(R.id.FilaBaliza);
+            Llegada = itemView.findViewById(R.id.Llegada);
         }
     }
 

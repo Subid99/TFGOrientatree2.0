@@ -32,6 +32,8 @@ import com.smov.gabriel.orientatree.model.User;
 import com.smov.gabriel.orientatree.ui.fragments.PopUpBalizas;
 import com.tfg.marllor.orientatree.R;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -45,7 +47,8 @@ public class ReciclerCardsAdapter extends RecyclerView.Adapter<ReciclerCardsAdap
         this.template = template;
         this.activity = activity;
     }
-
+    String pattern = "HH:mm:ss";
+    DateFormat df = new SimpleDateFormat(pattern);
     // This method creates a new ViewHolder object for each item in the RecyclerView
     @Override
     public MyViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
@@ -136,6 +139,14 @@ public class ReciclerCardsAdapter extends RecyclerView.Adapter<ReciclerCardsAdap
             holder.estadoParticipacion.setText("Sin Empezar");
             holder.estadoParticipacion.setTextColor(Color.RED);
         }
+        String Tiempo="Inicio --:--:--";
+        if(currentParticipation.getStartTime()!=null) {
+            Tiempo = "Inicio " +df.format(currentParticipation.getStartTime());
+        }
+        if(currentParticipation.getFinishTime()!=null) {
+            Tiempo = "Fin " +df.format(currentParticipation.getFinishTime());
+        }
+        holder.Tiempo.setText(Tiempo);
     }
 
     // This class defines the ViewHolder object for each item in the RecyclerView
@@ -146,7 +157,7 @@ public class ReciclerCardsAdapter extends RecyclerView.Adapter<ReciclerCardsAdap
 
         TextView nombre;
         TextView estadoParticipacion;
-
+        TextView Tiempo;
         TextView Balizas;
         CardView Tarjeta;
         ImageView participantImageView;
@@ -158,6 +169,7 @@ public class ReciclerCardsAdapter extends RecyclerView.Adapter<ReciclerCardsAdap
 
             participantImageView = itemView.findViewById(R.id.imageViewParticipante);
             Tarjeta = itemView.findViewById(R.id.Tarjeto);
+            Tiempo = itemView.findViewById(R.id.Tiempo);
             nombre = itemView.findViewById(R.id.Nombre);
             estadoParticipacion = itemView.findViewById(R.id.EstadoParticipacion);
             Balizas = itemView.findViewById(R.id.Balizas);
