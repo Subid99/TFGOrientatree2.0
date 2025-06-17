@@ -850,8 +850,12 @@ public class NowActivity extends AppCompatActivity {
 
     private void updateUIParticipants() {
         Intent intent = new Intent(NowActivity.this, VigilanciaActividadActivity.class);
+        if(activity.getFinishTime().toInstant().isBefore(new Date().toInstant())){
+            intent = new Intent(NowActivity.this, ReviewActivity.class);
+        }
         intent.putExtra("activity", activity);
         intent.putExtra("template", template);
+
         startActivity(intent);
     }
 

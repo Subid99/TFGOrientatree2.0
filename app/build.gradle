@@ -1,6 +1,8 @@
 plugins {
     id 'com.android.application'
     id 'com.google.gms.google-services'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 android {
@@ -24,13 +26,17 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
     buildFeatures {
         viewBinding true
+        compose true
     }
     namespace 'com.tfg.marllor.orientatree'
+    kotlinOptions {
+        jvmTarget = '11'
+    }
 }
 
 dependencies {
@@ -53,6 +59,8 @@ dependencies {
     implementation 'com.firebaseui:firebase-ui-storage:7.1.1'
     implementation 'com.google.android.gms:play-services-maps:18.2.0'
     implementation 'com.google.firebase:firebase-functions:20.4.0'
+    implementation 'androidx.recyclerview:recyclerview-selection:1.2.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.9.1'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'

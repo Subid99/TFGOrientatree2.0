@@ -54,7 +54,13 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.Period;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Date;
 
 public class TrackActivity extends AppCompatActivity implements OnMapReadyCallback {
 
@@ -72,32 +78,35 @@ public class TrackActivity extends AppCompatActivity implements OnMapReadyCallba
     private Activity activity;
     private Map templateMap;
     //private Participation participation;
-
+    private Duration duracionMax;
     // useful IDs
     private String userID;
     private String activityID;
-
+    private ArrayList<String> usuarios;
     // to format the way hours are displayed
     private static String pattern_hour = "HH:mm:ss";
     private static DateFormat df_hour = new SimpleDateFormat(pattern_hour);
 
     // arraylist with the locations
     private ArrayList<Location> locations;
-
+    private ArrayList<ArrayList> localizaciones;
     // objects needed to show the track
     private PolylineOptions polylineOptions;
+    private ArrayList<Polyline> polylinesPartial;
+
+    private ArrayList<Polyline> polylinesComplete;
     private Polyline polyline1; // (partial track)
     private Polyline polyline2; // (complete track)
 
     // max number of points that are shown at the same time in the track
-    private static final int RANGE = 60;
+    private static final int RANGE = 100;
 
     // Firebase services
     FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        Log.v("Hola",this.getClass().getSimpleName());
+        Log.v("Hola", this.getClass().getSimpleName());
         super.onCreate(savedInstanceState);
 
         binding = ActivityTrackBinding.inflate(getLayoutInflater());
@@ -112,14 +121,16 @@ public class TrackActivity extends AppCompatActivity implements OnMapReadyCallba
         Intent intent = getIntent();
         template = (Template) intent.getSerializableExtra("template");
         activity = (Activity) intent.getSerializableExtra("activity");
-        userID = intent.getExtras().getString("participantID");
-
-        // get the important IDs
-        if(activity != null /*&& participation != null*/) {
-            activityID = activity.getId();
-           // userID = participation.getParticipant();
+        usuarios = intent.getExtras().getStringArrayList("participantes");
+        for (int i = 0; usuarios.size() > i; i++) {
+            Log.v("participantes", usuarios.get(i));
         }
-
+        // get the important IDs
+        if (activity != null /*&& participation != null*/) {
+            activityID = activity.getId();
+            userID = usuarios.get(0);
+        }
+        duracionMax =Duration.ZERO;
         // binding UI elements
         toolbar = findViewById(R.id.track_toolbar);
         track_slider = findViewById(R.id.track_slider);
@@ -136,24 +147,36 @@ public class TrackActivity extends AppCompatActivity implements OnMapReadyCallba
         track_slider.addOnChangeListener(new Slider.OnChangeListener() {
             @Override
             public void onValueChange(@NonNull @NotNull Slider slider, float value, boolean fromUser) {
-                if(polyline1 != null && locations != null) {
+                Log.v("slider", "value: " + value);
+                Duration pctTiempo = duracionMax.dividedBy(100).multipliedBy((int)value);
+                for(int i = 0; i < polylinesPartial.size();i++){
+                if (polylinesPartial.get(i) != null && localizaciones.get(i) != null) {
                     ArrayList<LatLng> points = new ArrayList<>();
                     int index = (int) value;
-                    for(int i = index - RANGE; i < index; i ++) {
-                        if(i >= 0) {
-                            if(locations.get(i) != null) {
-                                LatLng p = new LatLng(locations.get(i).getLocation().getLatitude(),
-                                        locations.get(i).getLocation().getLongitude());
-                                points.add(p);
+                    Location firstLocation = (Location) localizaciones.get(i).get(0);
+                    Instant tiempoMax = firstLocation.getTime().toInstant().plus(pctTiempo);
+                    Date max = Date.from(tiempoMax);
+                    for (int j = 0; j < localizaciones.get(i).size(); j++) {
+                            if (localizaciones.get(i).get(j) != null) {
+                                Location locations = (Location) localizaciones.get(i).get(j);
+                                if(locations.getTime().before(max)){
+                                    LatLng p = new LatLng(locations.getLocation().getLatitude(),
+                                            locations.getLocation().getLongitude());
+                                    points.add(p);
+                                }
+
                             }
-                        }
+
                     }
-                    LatLng p = new LatLng(locations.get(index).getLocation().getLatitude(),
-                            locations.get(index).getLocation().getLongitude());
-                    points.add(p);
-                    polyline1.setPoints(points);
-                    trackHour_textView.setText(df_hour.format(locations.get(index).getTime()));
+                    polylinesPartial.get(i).setPoints(points);
+                    long totalSeconds = pctTiempo.getSeconds();
+                    long hours = totalSeconds / 3600;
+                    long minutes = (totalSeconds % 3600) / 60;
+                    long seconds = totalSeconds % 60;
+                    String formattedDuration = String.format("%02d:%02d:%02d", hours, minutes, seconds);
+                    trackHour_textView.setText(formattedDuration);
                 }
+            }
             }
         });
 
@@ -161,12 +184,12 @@ public class TrackActivity extends AppCompatActivity implements OnMapReadyCallba
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
-                    if(polyline2 != null && locations != null) {
-                        polyline2.setVisible(true);
+                    for(Polyline track : polylinesComplete){
+                        track.setVisible(true);
                     }
                 } else {
-                    if(polyline2 != null && locations != null) {
-                        polyline2.setVisible(false);
+                    for(Polyline track : polylinesComplete){
+                        track.setVisible(false);
                     }
                 }
             }
@@ -249,62 +272,85 @@ public class TrackActivity extends AppCompatActivity implements OnMapReadyCallba
                             mMap.setLatLngBoundsForCameraTarget(map_bounds);
 
                             // get the locations, create the polyline, enable the slider
-                            if(userID != null && activityID != null) {
+                            if (!usuarios.isEmpty() && activityID != null) {
                                 //initialize arrayList containing the locations
-                                locations = new ArrayList<>();
-                                // get the locations
-                                db.collection("activities").document(activityID)
-                                        .collection("participations").document(userID)
-                                        .collection("locations")
-                                        .orderBy("time", Query.Direction.ASCENDING)
-                                        .get()
-                                        .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                                            @Override
-                                            public void onComplete(@NonNull @NotNull Task<QuerySnapshot> task) {
-                                                for (QueryDocumentSnapshot documentSnapshot : task.getResult()) {
-                                                    Location location = documentSnapshot.toObject(Location.class);
-                                                    locations.add(location);
-                                                }
-                                                if(locations != null && locations.size() >= 1) {
-                                                    // setting partial track
-                                                    // set slider parameters
-                                                    track_slider.setValueFrom(0);
-                                                    track_slider.setValueTo(locations.size() - 1);
-                                                    if(locations.get(0) != null) {
-                                                        trackHour_textView.setText(df_hour.format(locations.get(0).getTime()));
-                                                        polylineOptions = new PolylineOptions()
-                                                                .add(new LatLng(locations.get(0).getLocation().getLatitude(),
-                                                                        locations.get(0).getLocation().getLongitude()));
-                                                        polyline1 = mMap.addPolyline(polylineOptions); // draw point at the start (partial track)
-                                                        polyline1.setWidth(15);
-                                                        if(polyline1 != null) {
-                                                            track_slider.setEnabled(true); // enable slider
-                                                        }
-                                                        // setting complete track
-                                                        polyline2 = mMap.addPolyline(polylineOptions); // draw point at the start (complete track)
-                                                        polyline2.setVisible(false);
-                                                        polyline2.setColor(R.color.primary_color);
-                                                        polyline2.setWidth(10);
-                                                        ArrayList<LatLng> points = new ArrayList<>();
-                                                        for (Location location : locations) {
-                                                            LatLng p = new LatLng(location.getLocation().getLatitude(),
-                                                                    location.getLocation().getLongitude());
-                                                            points.add(p);
-                                                        }
-                                                        polyline2.setPoints(points);
-                                                        trackCompleto_switch.setEnabled(true);
+                                localizaciones = new ArrayList<>();
+                                polylinesComplete = new ArrayList<>();
+                                polylinesPartial = new ArrayList<>();
+                                track_slider.setValueFrom(0);
+                                track_slider.setValueTo(100);
+                                track_slider.setEnabled(true);
+                                trackHour_textView.setText("00:00:00");
+                                Log.v("localizaciones", "tamaño usuarios " +  String.valueOf(usuarios.size()));
+                                for (int i = 0; i < usuarios.size(); i++) {
+                                    ArrayList<Location> localizacion = new ArrayList<>();
+                                    db.collection("activities").document(activityID)
+                                            .collection("participations").document(usuarios.get(i))
+                                            .collection("locations")
+                                            .orderBy("time", Query.Direction.ASCENDING)
+                                            .get()
+                                            .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                                                @Override
+                                                public void onComplete(@NonNull @NotNull Task<QuerySnapshot> task) {
+                                                    for (QueryDocumentSnapshot documentSnapshot : task.getResult()) {
+                                                        Location location = documentSnapshot.toObject(Location.class);
+                                                        localizacion.add(location);
                                                     }
-                                                } else {
-                                                    Toast.makeText(TrackActivity.this, "No se han encontrado datos que mostrar", Toast.LENGTH_SHORT).show();
+                                                    Polyline polylineParcial;
+                                                    Polyline polyLineCompleto;
+                                                    if (localizacion != null && localizacion.size() >= 1) {
+                                                        // setting partial track
+                                                        // set slider parameters
+
+                                                        if (localizacion.get(0) != null) {
+
+                                                            polylineOptions = new PolylineOptions()
+                                                                    .add(new LatLng(localizacion.get(0).getLocation().getLatitude(),
+                                                                            localizacion.get(0).getLocation().getLongitude()));
+                                                            polylineParcial = mMap.addPolyline(polylineOptions); // draw point at the start (partial track)
+                                                            polylineParcial.setWidth(15);
+
+                                                                 // enable slider
+
+                                                            // setting complete track
+                                                            polyLineCompleto = mMap.addPolyline(polylineOptions); // draw point at the start (complete track)
+                                                            polyLineCompleto.setVisible(false);
+                                                            polyLineCompleto.setColor(R.color.primary_color);
+                                                            polyLineCompleto.setWidth(10);
+                                                            ArrayList<LatLng> points = new ArrayList<>();
+                                                            for (Location location : localizacion) {
+                                                                LatLng p = new LatLng(location.getLocation().getLatitude(),
+                                                                        location.getLocation().getLongitude());
+                                                                points.add(p);
+                                                            }
+                                                            polyLineCompleto.setPoints(points);
+                                                            trackCompleto_switch.setEnabled(true);
+                                                            localizaciones.add(localizacion);
+                                                            polylinesComplete.add(polyLineCompleto);
+                                                            polylinesPartial.add(polylineParcial);
+                                                            if(calculaDuracion(localizacion).compareTo(duracionMax)>0){
+                                                                duracionMax=calculaDuracion(localizacion);
+                                                                Log.v("duracion", String.valueOf(duracionMax.abs().get(ChronoUnit.SECONDS))+ " s");
+                                                            }
+                                                        }
+                                                    } else {
+                                                        Toast.makeText(TrackActivity.this, "No se han encontrado datos que mostrar", Toast.LENGTH_SHORT).show();
+                                                    }
+                                                    Log.v("localizaciones", "tamaño localizaciones" +String.valueOf(localizacion.size()));
+
+                                                    Log.v("localizaciones", "tamaño array localizaciones" + String.valueOf(localizaciones.size()));
+
                                                 }
-                                            }
-                                        })
-                                        .addOnFailureListener(new OnFailureListener() {
-                                            @Override
-                                            public void onFailure(@NonNull @NotNull Exception e) {
-                                                Toast.makeText(TrackActivity.this, "Algo salió mal al descargar los datos de la participación. Sal y vuelve a intentarlo", Toast.LENGTH_SHORT).show();
-                                            }
-                                        });
+                                            })
+                                            .addOnFailureListener(new OnFailureListener() {
+                                                @Override
+                                                public void onFailure(@NonNull @NotNull Exception e) {
+                                                    Toast.makeText(TrackActivity.this, "Algo salió mal al descargar los datos de la participación. Sal y vuelve a intentarlo", Toast.LENGTH_SHORT).show();
+                                                }
+                                            });
+                                }
+                                Log.v("localizaciones", "tamaño array localizaciones final" + String.valueOf(localizaciones.size()));
+
                             } else {
                                 Toast.makeText(TrackActivity.this, "Algo salió mal al obtener los datos de la participación. Sal y vuelve a intentarlo", Toast.LENGTH_SHORT).show();
                             }
@@ -367,4 +413,13 @@ public class TrackActivity extends AppCompatActivity implements OnMapReadyCallba
         }
         return super.onOptionsItemSelected(item);
     }
+    public Duration calculaDuracion(ArrayList<Location> localizacion){
+        Duration duracion = Duration.ZERO;
+        localizacion.sort(Comparator.comparing(Location::getTime));
+        duracion = Duration.between(localizacion.get(0).getTime().toInstant(), localizacion.get(localizacion.size()-1).getTime().toInstant());
+        return duracion;
+
+    }
+
+
 }

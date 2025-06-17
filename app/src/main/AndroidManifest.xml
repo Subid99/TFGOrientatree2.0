@@ -45,9 +45,10 @@
         <activity
             android:name="com.smov.gabriel.orientatree.ui.CreditsActivity"
             android:exported="true"
-            android:screenOrientation="portrait" >
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="com.example.action.APP_ACTION" />
+
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -55,9 +56,10 @@
             android:name="com.smov.gabriel.orientatree.ui.TrackActivity"
             android:exported="true"
             android:label="@string/title_activity_track"
-            android:screenOrientation="portrait" >
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="com.example.action.APP_ACTION" />
+
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -65,9 +67,10 @@
             android:name="com.smov.gabriel.orientatree.ui.MyParticipationActivity"
             android:exported="true"
             android:parentActivityName="com.smov.gabriel.orientatree.ui.NowActivity"
-            android:screenOrientation="portrait" >
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="com.example.action.APP_ACTION" />
+
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -75,36 +78,40 @@
             android:name="com.smov.gabriel.orientatree.ui.NowActivity"
             android:exported="true"
             android:parentActivityName="com.smov.gabriel.orientatree.ui.HomeActivity"
-            android:screenOrientation="portrait" >
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="com.example.action.APP_ACTION" />
+
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.ReachesActivity"
             android:exported="true"
-            android:screenOrientation="portrait" >
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="com.example.action.APP_ACTION" />
+
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.ChallengeActivity"
             android:exported="true"
-            android:screenOrientation="portrait" >
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="com.example.action.APP_ACTION" />
+
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.ParticipantsListActivity"
             android:exported="true"
-            android:screenOrientation="portrait" >
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="com.example.action.APP_ACTION" />
+
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -112,9 +119,10 @@
             android:name="com.smov.gabriel.orientatree.ui.MapParticipantActivity"
             android:exported="true"
             android:label="@string/title_activity_map"
-            android:screenOrientation="portrait" >
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="com.example.action.APP_ACTION" />
+
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -122,56 +130,62 @@
             android:name="com.smov.gabriel.orientatree.ui.FindActivityActivity"
             android:exported="true"
             android:parentActivityName="com.smov.gabriel.orientatree.ui.HomeActivity"
-            android:windowSoftInputMode="adjustNothing"
-            android:screenOrientation="portrait" >
-        <intent-filter>
-            <action android:name="com.example.action.APP_ACTION" />
-            <category android:name="android.intent.category.DEFAULT" />
-        </intent-filter>
-    </activity>
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustNothing">
+            <intent-filter>
+                <action android:name="com.example.action.APP_ACTION" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.SelectedTemplateActivity"
             android:exported="true"
             android:parentActivityName="com.smov.gabriel.orientatree.ui.FindTemplateActivity"
-            android:screenOrientation="portrait" >
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="com.example.action.APP_ACTION" />
+
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.FindTemplateActivity"
             android:exported="true"
-            android:screenOrientation="portrait" >
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="com.example.action.APP_ACTION" />
+
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.EditProfileActivity"
             android:exported="true"
-            android:screenOrientation="portrait" >
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="com.example.action.APP_ACTION" />
+
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.HomeActivity"
             android:exported="false"
-            android:screenOrientation="portrait" >
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="com.example.action.APP_ACTION" />
+
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.WelcomeActivity"
             android:exported="true"
-            android:screenOrientation="portrait" >
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="com.example.action.APP_ACTION" />
+
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -179,9 +193,10 @@
             android:name="com.smov.gabriel.orientatree.ui.LogInActivity"
             android:exported="true"
             android:label="Iniciar sesión"
-            android:screenOrientation="portrait" >
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="com.example.action.APP_ACTION" />
+
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -189,21 +204,33 @@
             android:name="com.smov.gabriel.orientatree.ui.VigilanciaActividadActivity"
             android:exported="true"
             android:label="VigilanciaProfesor"
-            android:screenOrientation="portrait" >
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="com.example.action.APP_ACTION" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="com.smov.gabriel.orientatree.ui.ReviewActivity"
+            android:exported="true"
+            android:label="VigilanciaProfesor"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="com.example.action.APP_ACTION" />
+
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.SignUpActivity"
             android:exported="true"
-
             android:label="Registrarse"
             android:parentActivityName="com.smov.gabriel.orientatree.ui.LogInActivity"
-            android:screenOrientation="portrait" >
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="com.example.action.APP_ACTION" />
+
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -217,6 +244,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
         <receiver
             android:name="com.smov.gabriel.orientatree.ui.HomeActivity"
             android:exported="true"> <!-- or false -->
@@ -224,10 +252,11 @@
                 <action android:name="com.smov.gabriel.orientatree.ui.HomeActivity" />
             </intent-filter>
         </receiver>
+
         <service
             android:name="com.smov.gabriel.orientatree.services.LocationService"
-            android:foregroundServiceType="location"
             android:exported="true"
+            android:foregroundServiceType="location"
             android:stopWithTask="true" />
     </application>
 
