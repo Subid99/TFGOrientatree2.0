@@ -12,6 +12,7 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentPagerAdapter;
 import androidx.viewpager.widget.ViewPager;
 
+import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -34,6 +35,11 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
+import com.smov.gabriel.orientatree.persistence.AppDatabase;
+import com.smov.gabriel.orientatree.persistence.entities.OfflineActivity;
+import com.smov.gabriel.orientatree.persistence.entities.OfflineMap;
+import com.smov.gabriel.orientatree.persistence.entities.OfflineTemplate;
+import com.smov.gabriel.orientatree.ui.fragments.OnGoingFragment2;
 import com.tfg.marllor.orientatree.R;
 import com.smov.gabriel.orientatree.services.LocationService;
 import com.smov.gabriel.orientatree.ui.fragments.CompletedFragment;
@@ -65,6 +71,7 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
     // fragment of each tab
     private CompletedFragment completedFragment;
     private OnGoingFragment onGoingFragment;
+    private OnGoingFragment2 onGoingFragment2;
     private ProgrammedFragment programmedFragment;
 
     // useful to reset the last tab when coming back from another activity
@@ -83,8 +90,10 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
     public StorageReference storageReference;
     public FirebaseUser user;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.v("Hola",this.getClass().getSimpleName());
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
 
@@ -98,7 +107,7 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
                 //At this point you should start the login activity and finish this one
                 updateUIIdentification();
             }
-        }, intentFilter);
+        }, intentFilter,Context.RECEIVER_NOT_EXPORTED);
         //** **//
 
         mAuth = FirebaseAuth.getInstance();
@@ -154,13 +163,17 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         // fragment initialization
         completedFragment = new CompletedFragment();
         onGoingFragment = new OnGoingFragment();
+        onGoingFragment2 = new OnGoingFragment2();
         programmedFragment = new ProgrammedFragment();
         // binding tabs and fragments
         tabLayout.setupWithViewPager(viewPager);
         ViewPagerAdapter viewPagerAdapter = new ViewPagerAdapter(getSupportFragmentManager(), 0);
-        viewPagerAdapter.adFragment(completedFragment, "pasadas");
         viewPagerAdapter.adFragment(onGoingFragment, "en curso");
+        //viewPagerAdapter.adFragment(onGoingFragment2, "en cursoMOD");
+        viewPagerAdapter.adFragment(completedFragment, "pasadas");
         viewPagerAdapter.adFragment(programmedFragment, "previstas");
+        logDatabaseContents(this);
+        
         viewPager.setAdapter(viewPagerAdapter);
         tabLayout.setTabTextColors(R.color.black, R.color.black); // tab text color black, both selected and unselected
 
@@ -381,5 +394,34 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
     private void updateUICredits() {
         Intent intent = new Intent(HomeActivity.this, CreditsActivity.class);
         startActivity(intent);
+    }
+    public static void logDatabaseContents(Context context) {
+        new Thread(() -> {
+            AppDatabase db = AppDatabase.getDatabase(context);
+
+            // Actividades
+            List<OfflineActivity> activities = db.activityDao().getAllActivities();
+            Log.d("DatabaseDump", "==== ACTIVIDADES ====");
+            for (OfflineActivity activity : activities) {
+                Log.d("DatabaseDump", "ID: " + activity.id +
+                        " | Title: " + activity.title +
+                        " | Template: " + activity.template +
+                        " | Fecha: " + activity.startTime);
+            }
+
+            // Templates
+            List<OfflineTemplate> templates = db.templateDao().getAllTemplates();
+            Log.d("DatabaseDump", "==== TEMPLATES ====");
+            for (OfflineTemplate template : templates) {
+                Log.d("DatabaseDump", "ID: " + template.templateId +
+                        " | Name: " + template.name);
+            }
+            List<OfflineMap> maps = db.mapDao().getAllMaps();
+            Log.d("DatabaseDump", "==== Maps ====");
+            for (OfflineMap map : maps) {
+                Log.d("DatabaseDump", "ID: " + map.mapId);
+            }
+
+        }).start();
     }
 }

@@ -7,22 +7,7 @@
     android:orientation="vertical"
     tools:context=".ui.ParticipantsListActivity">
 
-    <com.google.android.material.appbar.AppBarLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/participantsList_toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:title="Participantes"
-            app:titleTextColor="@color/black">
-
-        </androidx.appcompat.widget.Toolbar>
-
-    </com.google.android.material.appbar.AppBarLayout>
-
-    <TextView
+        <TextView
         android:id="@+id/participantsListparticipants_textView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

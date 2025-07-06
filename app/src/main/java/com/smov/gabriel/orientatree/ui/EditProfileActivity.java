@@ -90,6 +90,7 @@ public class EditProfileActivity extends AppCompatActivity implements Navigation
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.v("Hola",this.getClass().getSimpleName());
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_profile);
 
@@ -103,7 +104,7 @@ public class EditProfileActivity extends AppCompatActivity implements Navigation
                 //At this point you should start the login activity and finish this one
                 updateUIIdentification();
             }
-        }, intentFilter);
+        }, intentFilter,Context.RECEIVER_NOT_EXPORTED);
         //** **//
 
         mAuth = FirebaseAuth.getInstance();

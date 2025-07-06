@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context=".ui.NowActivity">
+    tools:context="com.smov.gabriel.orientatree.ui.NowActivity">
 
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:id="@+id/now_coordinatorLayout"
@@ -97,8 +97,8 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:enabled="false"
-                                android:text="ir al mapa"
-                                android:visibility="gone" />
+                                android:text="Ver el Mapa"
+                                android:visibility="visible" />
 
                         </LinearLayout>
 
@@ -238,7 +238,7 @@
             android:layout_gravity="bottom|center"
             android:layout_margin="16dp"
             android:enabled="false"
-            android:text="Ver participantes"
+            android:text="Ir a la actividad"
             android:visibility="gone" />
 
 

@@ -1,5 +1,7 @@
 package com.smov.gabriel.orientatree.model;
 
+import com.google.firebase.firestore.GeoPoint;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -13,6 +15,7 @@ public class Participation implements Comparator<Participation>, Serializable {
     private Date finishTime;
     private boolean completed;
     private ArrayList<BeaconReached> reaches;
+    private GeoPoint lastLocation;
 
     public Participation() {
 
@@ -70,6 +73,28 @@ public class Participation implements Comparator<Participation>, Serializable {
         this.reaches = reaches;
     }
 
+    public void setLastLocation(GeoPoint lastLocation){ this.lastLocation = lastLocation;}
+    public GeoPoint getLastLocation(){ return lastLocation;}
+
+    public String obtenerResultados(){
+        String devolver= "";
+        if(reaches!= null){
+        for(int i=0;i<reaches.size();i++){
+            BeaconReached Baliza = reaches.get(i);
+            if(Baliza.isAnswered()){
+                if(Baliza.isAnswer_right()){
+                    devolver = devolver+"✔";
+                }
+                else{
+                    devolver = devolver+"❌";
+                }
+            }
+            else{
+                devolver = devolver+"➖";
+            }
+        }
+
+    }return devolver;}
     @Override
     public int compare(Participation o1, Participation o2) {
         if (o1.isCompleted() && !o2.isCompleted()) {

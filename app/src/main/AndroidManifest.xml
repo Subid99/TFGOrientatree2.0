@@ -1,27 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <!--
-         The ACCESS_COARSE/FINE_LOCATION permissions are not required to use
-         Google Maps Android API v2, but you must specify either coarse or fine
-         location permissions for the "MyLocation" functionality.
-    -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.VIBRATE" />
-
+    <meta-data
+        android:name="com.google.android.geo.API_KEY"
+        android:value="${GOOGLE_MAPS_API_KEY}" />
     <application
         android:allowBackup="true"
+        android:name="com.smov.gabriel.orientatree.mainApplication"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.OrientaTree">
-
+        <activity
+            android:name="com.smov.gabriel.orientatree.ui.ParticipantActivity2"
+            android:exported="false"
+            android:label="@string/title_activity_participant2"
+            android:theme="@style/Theme.OrientaTree.NoActionBar" />
         <!--
              The API key for Google Maps-based APIs is defined as a string resource.
              (See the file "res/values/google_maps_api.xml").
@@ -37,78 +43,199 @@
         <activity
             android:name="com.smov.gabriel.orientatree.ui.OrganizerMapActivity"
             android:exported="true"
-            android:label="@string/title_activity_organizer_map"/>
+            android:label="@string/title_activity_organizer_map" />
         <activity
             android:name="com.smov.gabriel.orientatree.ui.CreditsActivity"
             android:exported="true"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="com.example.action.APP_ACTION" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.TrackActivity"
             android:exported="true"
             android:label="@string/title_activity_track"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="com.example.action.APP_ACTION" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.MyParticipationActivity"
             android:exported="true"
             android:parentActivityName="com.smov.gabriel.orientatree.ui.NowActivity"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="com.example.action.APP_ACTION" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.NowActivity"
+            android:exported="true"
             android:parentActivityName="com.smov.gabriel.orientatree.ui.HomeActivity"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="com.example.action.APP_ACTION" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.ReachesActivity"
             android:exported="true"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="com.example.action.APP_ACTION" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.ChallengeActivity"
             android:exported="true"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="com.example.action.APP_ACTION" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.ParticipantsListActivity"
             android:exported="true"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="com.example.action.APP_ACTION" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         <activity
-            android:name="com.smov.gabriel.orientatree.ui.MapActivity"
+            android:name="com.smov.gabriel.orientatree.ui.MapParticipantActivity"
             android:exported="true"
             android:label="@string/title_activity_map"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="com.example.action.APP_ACTION" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.FindActivityActivity"
+            android:exported="true"
             android:parentActivityName="com.smov.gabriel.orientatree.ui.HomeActivity"
             android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustNothing" />
+            android:windowSoftInputMode="adjustNothing">
+            <intent-filter>
+                <action android:name="com.example.action.APP_ACTION" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.SelectedTemplateActivity"
             android:exported="true"
             android:parentActivityName="com.smov.gabriel.orientatree.ui.FindTemplateActivity"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="com.example.action.APP_ACTION" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.FindTemplateActivity"
             android:exported="true"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="com.example.action.APP_ACTION" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.EditProfileActivity"
             android:exported="true"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="com.example.action.APP_ACTION" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.HomeActivity"
-            android:screenOrientation="portrait" />
+            android:exported="false"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="com.example.action.APP_ACTION" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.WelcomeActivity"
             android:exported="true"
-            android:screenOrientation="portrait"/>
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="com.example.action.APP_ACTION" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.LogInActivity"
             android:exported="true"
             android:label="Iniciar sesión"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="com.example.action.APP_ACTION" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="com.smov.gabriel.orientatree.ui.VigilanciaActividadActivity"
+            android:exported="true"
+            android:label="VigilanciaProfesor"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="com.example.action.APP_ACTION" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="com.smov.gabriel.orientatree.ui.ReviewActivity"
+            android:exported="true"
+            android:label="VigilanciaProfesor"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="com.example.action.APP_ACTION" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.SignUpActivity"
             android:exported="true"
             android:label="Registrarse"
             android:parentActivityName="com.smov.gabriel.orientatree.ui.LogInActivity"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="com.example.action.APP_ACTION" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         <activity
             android:name="com.smov.gabriel.orientatree.ui.MainActivity"
             android:exported="true"
@@ -120,8 +247,17 @@
             </intent-filter>
         </activity>
 
+        <receiver
+            android:name="com.smov.gabriel.orientatree.ui.HomeActivity"
+            android:exported="true"> <!-- or false -->
+            <intent-filter>
+                <action android:name="com.smov.gabriel.orientatree.ui.HomeActivity" />
+            </intent-filter>
+        </receiver>
+
         <service
             android:name="com.smov.gabriel.orientatree.services.LocationService"
+            android:exported="true"
             android:foregroundServiceType="location"
             android:stopWithTask="true" />
     </application>

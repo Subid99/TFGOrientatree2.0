@@ -222,6 +222,18 @@ public class ChallengeQuizFragment extends Fragment {
     }
 
     private void updateBeaconReach() {
+        challengeQuiz_progressIndicator.setVisibility(View.GONE);
+        challengeQuiz_button.setEnabled(false);
+        quiz_radioGroup.setEnabled(false);
+        quiz_radioButton_0.setClickable(false);
+        quiz_radioButton_1.setClickable(false);
+        quiz_radioButton_2.setClickable(false);
+        quiz_radioButton_3.setClickable(false);
+        if(givenAnswerIsRight) {
+            showPositiveFeedBack();
+        } else {
+            showNegativeFeedBack();
+        }
         ca.db.collection("activities").document(ca.activityID)
                 .collection("participations").document(ca.userID)
                 .collection("beaconReaches").document(ca.beacon.getBeacon_id())
@@ -231,18 +243,7 @@ public class ChallengeQuizFragment extends Fragment {
                 .addOnSuccessListener(new OnSuccessListener<Void>() {
                     @Override
                     public void onSuccess(Void unused) {
-                        challengeQuiz_progressIndicator.setVisibility(View.GONE);
-                        challengeQuiz_button.setEnabled(false);
-                        quiz_radioGroup.setEnabled(false);
-                        quiz_radioButton_0.setClickable(false);
-                        quiz_radioButton_1.setClickable(false);
-                        quiz_radioButton_2.setClickable(false);
-                        quiz_radioButton_3.setClickable(false);
-                        if(givenAnswerIsRight) {
-                            showPositiveFeedBack();
-                        } else {
-                            showNegativeFeedBack();
-                        }
+
                     }
                 })
                 .addOnFailureListener(new OnFailureListener() {

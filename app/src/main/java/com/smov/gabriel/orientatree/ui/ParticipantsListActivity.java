@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
@@ -30,9 +31,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 public class ParticipantsListActivity extends AppCompatActivity {
-
-    private Toolbar toolbar;
-
     private Activity activity;
     private Template template;
 
@@ -50,6 +48,7 @@ public class ParticipantsListActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.v("Hola",this.getClass().getSimpleName());
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_participants_list);
 
@@ -65,11 +64,7 @@ public class ParticipantsListActivity extends AppCompatActivity {
         participantsListActivity = (ParticipantsListActivity) this;
 
         // setting the AppBar
-        toolbar = findViewById(R.id.participantsList_toolbar);
-        setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-
-        // get the activity
+                // get the activity
         Intent intent = getIntent();
         activity = (Activity) intent.getSerializableExtra("activity");
         template = (Template) intent.getSerializableExtra("template");
@@ -104,7 +99,7 @@ public class ParticipantsListActivity extends AppCompatActivity {
                             } else {
                                 participantsListparticipants_textView.setText("Participantes: (" + participations.size() + ")");
                             }
-                            participantAdapter = new ParticipantAdapter(participantsListActivity, ParticipantsListActivity.this,
+                            participantAdapter = new ParticipantAdapter( ParticipantsListActivity.this,
                                     participations, template, activity);
                             participantsList_recyclerView.setAdapter(participantAdapter);
                             participantsList_recyclerView.setLayoutManager(new LinearLayoutManager(ParticipantsListActivity.this));

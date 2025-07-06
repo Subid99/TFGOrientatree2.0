@@ -12,6 +12,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
@@ -32,6 +33,7 @@ import com.google.firebase.storage.FileDownloadTask;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.OnProgressListener;
 import com.google.firebase.storage.StorageReference;
+import com.google.gson.Gson;
 import com.tfg.marllor.orientatree.R;
 import com.smov.gabriel.orientatree.model.Activity;
 import com.smov.gabriel.orientatree.model.BeaconReached;
@@ -82,12 +84,14 @@ public class MyParticipationActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.v("Hola",this.getClass().getSimpleName());
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_my_participation);
 
         // get the intent
         Intent intent = getIntent();
-        participation = (Participation) intent.getSerializableExtra("participation");
+        String json = getIntent().getStringExtra("participation");
+        participation = new Gson().fromJson(json, Participation.class);
         activity = (Activity) intent.getSerializableExtra("activity");
         template = (Template) intent.getSerializableExtra("template"); 
 
@@ -364,7 +368,11 @@ public class MyParticipationActivity extends AppCompatActivity {
         Intent intent = new Intent(MyParticipationActivity.this, TrackActivity.class);
         intent.putExtra("template", template);
         intent.putExtra("activity", activity);
-        intent.putExtra("participantID", participation.getParticipant());
+        ArrayList<String> participante = new ArrayList<>();
+        participante.add(participation.getParticipant());
+        intent.putExtra("participantes",participante);
+        ArrayList<String> nombre = new ArrayList<>();
+        intent.putExtra("nombres", nombre);
         startActivity(intent);
     }
 
