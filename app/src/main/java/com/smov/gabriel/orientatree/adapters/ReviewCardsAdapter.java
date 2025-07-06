@@ -2,6 +2,7 @@ package com.smov.gabriel.orientatree.adapters;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -41,8 +42,12 @@ import org.jspecify.annotations.NonNull;
 import java.lang.reflect.Array;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 
 public class ReviewCardsAdapter extends RecyclerView.Adapter<ReviewCardsAdapter.MyViewHolder> {
     private ArrayList<Participation> participations;
@@ -52,6 +57,7 @@ public class ReviewCardsAdapter extends RecyclerView.Adapter<ReviewCardsAdapter.
     private boolean SelectMode = false;
     private ReviewActivity reviewActivity;
     private ArrayList<String> selectedItems;
+    private ArrayList<String> nombres;
 
     public ReviewCardsAdapter(ArrayList<Participation> participations, Template template, Activity activity, ReviewActivity activity1) {
         this.participations = participations;
@@ -59,6 +65,7 @@ public class ReviewCardsAdapter extends RecyclerView.Adapter<ReviewCardsAdapter.
         this.activity = activity;
         this.reviewActivity = activity1;
         this.selectedItems = new ArrayList<>();
+        this.nombres = new ArrayList<>();
     }
 
     String pattern = "HH:mm:ss";
@@ -163,12 +170,22 @@ public class ReviewCardsAdapter extends RecyclerView.Adapter<ReviewCardsAdapter.
             holder.estadoParticipacion.setText("Sin Empezar");
             holder.estadoParticipacion.setTextColor(Color.RED);
         }
-        String Tiempo = "Inicio --:--:--";
+        String Tiempo = "Duración --:--:--";
         if (currentParticipation.getStartTime() != null) {
-            Tiempo = "Inicio " + df.format(currentParticipation.getStartTime());
+            Duration duration = Duration.between(currentParticipation.getStartTime().toInstant(),new Date().toInstant());
+            Log.v("duration",duration.toString());
+            Log.v("duration","holita");
+            LocalTime time = LocalTime.MIDNIGHT.plus(duration);
+            Log.v("duration",time.toString());
+            Log.v("duration",time.format(DateTimeFormatter.ofPattern("HH:mm:ss")));
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+            Tiempo = "Duración " + time.format(formatter);
         }
         if (currentParticipation.getFinishTime() != null) {
-            Tiempo = "Fin " + df.format(currentParticipation.getFinishTime());
+            Duration duration = Duration.between(currentParticipation.getStartTime().toInstant(),currentParticipation.getFinishTime().toInstant());
+            LocalTime time = LocalTime.MIDNIGHT.plus(duration);
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+            Tiempo = "Duración " + time.format(formatter);
         }
         holder.Tiempo.setText(Tiempo);
 
@@ -216,11 +233,13 @@ public class ReviewCardsAdapter extends RecyclerView.Adapter<ReviewCardsAdapter.
                 holder.Tarjeta.setSelected(true);
                 holder.Tarjeta.setBackgroundColor(Color.GRAY);
                 selectedItems.add(userID);
+                nombres.add(String.valueOf(holder.nombre.getText()));
             }
             else{
                 holder.Tarjeta.setSelected(false);
                 holder.Tarjeta.setBackgroundColor(Color.WHITE);
                 selectedItems.remove(userID);
+                nombres.remove(String.valueOf(holder.nombre.getText()));
                 if (selectedItems.isEmpty()){
                     reviewActivity.ocultaBoton();
                     SelectMode = false;
@@ -234,16 +253,21 @@ public class ReviewCardsAdapter extends RecyclerView.Adapter<ReviewCardsAdapter.
                 holder.Tarjeta.setSelected(true);
                 holder.Tarjeta.setBackgroundColor(Color.GRAY);
                 selectedItems.add(userID);
+                nombres.add(String.valueOf(holder.nombre.getText()));
             } else {
                 holder.Tarjeta.setSelected(false);
                 holder.Tarjeta.setBackgroundColor(Color.WHITE);
                 selectedItems.remove(userID);
+                nombres.remove(String.valueOf(holder.nombre.getText()));
             }
         }
 
     }
     public ArrayList<String> getSelectedItems() {
         return selectedItems;
+    }
+    public ArrayList<String> getNombres() {
+        return nombres;
     }
 }
 

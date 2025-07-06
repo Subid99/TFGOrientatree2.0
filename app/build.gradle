@@ -7,7 +7,12 @@ plugins {
 
 android {
 
-
+    defaultConfig {
+        // Leer la clave desde local.properties
+        Properties properties = new Properties()
+        properties.load(project.rootProject.file("local.properties").newDataInputStream())
+        manifestPlaceholders = [GOOGLE_MAPS_API_KEY: "${properties.getProperty('GOOGLE_MAPS_API_KEY')}"]
+    }
     compileSdkVersion 34
     defaultConfig {
         applicationId "com.tfg.marllor.orientatree"
@@ -54,8 +59,15 @@ dependencies {
     implementation 'androidx.navigation:navigation-ui:2.6.0'
     implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.6.0'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.0'
+    implementation "androidx.lifecycle:lifecycle-process:2.4.0"
+    implementation 'com.google.code.gson:gson:2.8.9'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation 'com.google.firebase:firebase-storage:21.0.1'
+    implementation "androidx.work:work-runtime:2.7.1"
+    implementation "androidx.work:work-rxjava2:2.7.1"
+    implementation "androidx.room:room-runtime:2.4.0"
+    annotationProcessor "androidx.room:room-compiler:2.4.0"
+    implementation "androidx.work:work-gcm:2.7.1"
     implementation 'com.firebaseui:firebase-ui-storage:7.1.1'
     implementation 'com.google.android.gms:play-services-maps:18.2.0'
     implementation 'com.google.firebase:firebase-functions:20.4.0'

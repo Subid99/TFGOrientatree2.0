@@ -2,6 +2,9 @@ package com.smov.gabriel.orientatree.adapters;
 
 import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -20,11 +23,15 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
+import com.smov.gabriel.orientatree.persistence.AppDatabase;
+import com.smov.gabriel.orientatree.persistence.Converters;
+import com.smov.gabriel.orientatree.persistence.entities.OfflineTemplate;
 import com.smov.gabriel.orientatree.ui.NowActivity;
 import com.tfg.marllor.orientatree.R;
 import com.smov.gabriel.orientatree.model.Activity;
 import com.smov.gabriel.orientatree.model.Template;
 
+import java.io.File;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -37,11 +44,12 @@ public class ActivityAdapter extends RecyclerView.Adapter<ActivityAdapter.MyView
 
     private ArrayList<Activity> activities;
     private int position;
-
+    private AppDatabase localDb;
     public ActivityAdapter(android.app.Activity homeActivity, Context context, ArrayList<Activity> activities) {
         this.homeActivity = homeActivity;
         this.context = context;
         this.activities = activities;
+        localDb = AppDatabase.getDatabase(context);
     }
 
     @NonNull
@@ -49,61 +57,123 @@ public class ActivityAdapter extends RecyclerView.Adapter<ActivityAdapter.MyView
     public MyViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         LayoutInflater inflater = LayoutInflater.from(context);
         View view = inflater.inflate(R.layout.row_activity, parent, false);
+        localDb = AppDatabase.getDatabase(context);
         return new MyViewHolder(view);
     }
 
 
     @Override
     public void onBindViewHolder(@NonNull MyViewHolder holder, int position) {
-        this.position = position;
         Activity activity = activities.get(position);
+        String user_id = holder.mAuth.getCurrentUser() != null ?
+                holder.mAuth.getCurrentUser().getUid() : "";
 
-        String planner_id = activity.getPlanner_id();
-        String user_id = holder.mAuth.getCurrentUser().getUid();
-
-        // formatting date in order to display it on card
+        // Formatear fecha
         String pattern = "dd/MM/yyyy";
         DateFormat df = new SimpleDateFormat(pattern);
-        Date date = activity.getStartTime();
-        String dateAsString = df.format(date);
+        String dateAsString = df.format(activity.getStartTime());
 
+        // Configurar vistas básicas
         holder.title_textView.setText(activity.getTitle());
         holder.date_textView.setText("Fecha: " + dateAsString);
 
+        // Determinar rol del usuario
         if (activity.getPlanner_id().equals(user_id)) {
             holder.role_textView.setText("Organizador/a");
-        } else if (activity.getParticipants() != null) {
-            if (activity.getParticipants().contains(user_id)) {
-                holder.role_textView.setText("Participante");
-            }
+        } else if (activity.getParticipants() != null &&
+                activity.getParticipants().contains(user_id)) {
+            holder.role_textView.setText("Participante");
         } else {
             holder.role_textView.setText("");
         }
 
-        holder.row_activity_layout.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                updateUINowActivity(activity);
-            }
+        // Configurar click listener
+        holder.row_activity_layout.setOnClickListener(v -> {
+            updateUINowActivity(activity);
         });
 
-        holder.db.collection("templates").document(activity.getTemplate())
-                .get()
-                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
-                    @Override
-                    public void onSuccess(DocumentSnapshot documentSnapshot) {
-                        Template template = documentSnapshot.toObject(Template.class);
-                        holder.template_textView.setText(template.getName());
-                    }
-                });
+        // Obtener nombre del template (versión offline/online)
+        loadTemplateName(holder, activity.getTemplate());
 
-        // get and set the activity picture
-        StorageReference ref = holder.storageReference.child("templateImages/" + activity.getTemplate() + ".jpg");
-        Glide.with(context)
-                .load(ref)
-                .diskCacheStrategy(DiskCacheStrategy.NONE) // prevent caching
-                .skipMemoryCache(true) // prevent caching
-                .into(holder.rowImage_imageView);
+        // Cargar imagen (versión offline/online)
+        loadActivityImage(holder, activity.getTemplate());
+    }
+
+    private void loadTemplateName(MyViewHolder holder, String templateId) {
+        // Primero intentar desde local
+        new Thread(() -> {
+            OfflineTemplate Offlinetemplate = localDb.templateDao().getTemplateById(templateId);
+            if (Offlinetemplate != null) {
+                holder.itemView.post(() -> {
+                    holder.template_textView.setText(Offlinetemplate.name);
+                });
+            } else {
+                // Si no está localmente, intentar desde Firestore (si hay conexión)
+                if (isOnline()) {
+                    holder.db.collection("templates").document(templateId)
+                            .get()
+                            .addOnSuccessListener(documentSnapshot -> {
+                                if (documentSnapshot.exists()) {
+                                    Template template = documentSnapshot.toObject(Template.class);
+                                    holder.template_textView.setText(template.getName());
+                                    // Guardar localmente para próximas veces
+                                    saveTemplateLocally(template);
+                                }
+                            });
+                }
+            }
+        }).start();
+    }
+
+    private void loadActivityImage(MyViewHolder holder, String templateId) {
+        // Primero intentar cargar imagen local
+        File localFile = new File(context.getFilesDir(), "template_" + templateId + ".jpg");
+
+        if (localFile.exists()) {
+            Log.v("ImageDownload", "ExisteImage"+localFile.getPath());
+            Glide.with(context)
+                    .load(localFile)
+                    .into(holder.rowImage_imageView);
+        } else {
+            // Si no existe localmente, cargar desde Firebase Storage (si hay conexión)
+            if (isOnline()) {
+                StorageReference ref = holder.storageReference.child("templateImages/" + templateId + ".jpg");
+                Glide.with(context)
+                        .load(ref)
+                        .diskCacheStrategy(DiskCacheStrategy.NONE)
+                        .skipMemoryCache(true)
+                        .into(holder.rowImage_imageView);
+
+                // Descargar imagen para almacenamiento local
+                downloadImageForOfflineUse(ref, templateId);
+            } else {
+                // Mostrar placeholder si no hay conexión ni imagen local
+                Glide.with(context)
+                        .load(R.drawable.ic_peacock)
+                        .into(holder.rowImage_imageView);
+            }
+        }
+    }
+
+    private void downloadImageForOfflineUse(StorageReference ref, String templateId) {
+        File localFile = new File(context.getFilesDir(), "template_" + templateId + ".jpg");
+        ref.getFile(localFile).addOnSuccessListener(taskSnapshot -> {
+            Log.d("ImageDownload", "Imagen guardada localmente: " + localFile.getPath());
+        }).addOnFailureListener(e -> {
+            Log.e("ImageDownload", "Error al guardar imagen local", e);
+        });
+    }
+
+    private void saveTemplateLocally(Template template) {
+        new Thread(() -> {
+            localDb.templateDao().insertTemplate(Converters.toEntity(template));
+        }).start();
+    }
+
+    private boolean isOnline() {
+        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = cm.getActiveNetworkInfo();
+        return netInfo != null && netInfo.isConnectedOrConnecting();
     }
 
     @Override

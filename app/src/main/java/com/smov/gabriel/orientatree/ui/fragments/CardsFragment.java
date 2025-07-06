@@ -27,7 +27,6 @@ import com.smov.gabriel.orientatree.model.Activity;
 import com.smov.gabriel.orientatree.model.Participation;
 import com.smov.gabriel.orientatree.model.Template;
 import com.smov.gabriel.orientatree.model.TemplateType;
-import com.smov.gabriel.orientatree.model.participationGiver;
 import com.smov.gabriel.orientatree.ui.ParticipantsListActivity;
 import com.tfg.marllor.orientatree.R;
 

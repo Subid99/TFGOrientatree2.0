@@ -54,6 +54,8 @@ android:orientation="horizontal"
         android:gravity="center"
         android:padding="8dp"
         android:text="--.--.--"
-        android:textSize="20sp" />
+        android:textSize="20sp"
+        android:visibility="visible"
+        tools:visibility="visible" />
 </TableRow>
 </TableLayout>

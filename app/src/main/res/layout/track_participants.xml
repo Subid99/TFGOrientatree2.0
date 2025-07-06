@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"> <!-- Small padding for separation -->
+
+    <!-- ImageView with fixed aspect ratio -->
+    <ImageView
+        android:id="@+id/Color"
+        android:layout_width="wrap_content"
+        android:layout_height="15sp"
+        android:layout_weight="1"
+        android:contentDescription="Color image"
+        android:src="@drawable/solid_color"/>
+
+    <TextView
+        android:id="@+id/Nombre"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_weight="2"
+        android:gravity="left|center_vertical"
+        android:paddingStart="8dp"
+        android:text="Paco"
+        android:textSize="15sp"/>
+</LinearLayout>

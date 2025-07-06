@@ -2,6 +2,7 @@ package com.smov.gabriel.orientatree.adapters;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,8 +35,13 @@ import com.tfg.marllor.orientatree.R;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 
 public class ReciclerCardsAdapter extends RecyclerView.Adapter<ReciclerCardsAdapter.MyViewHolder> {
     private ArrayList<Participation> emplist;
@@ -139,13 +145,26 @@ public class ReciclerCardsAdapter extends RecyclerView.Adapter<ReciclerCardsAdap
             holder.estadoParticipacion.setText("Sin Empezar");
             holder.estadoParticipacion.setTextColor(Color.RED);
         }
-        String Tiempo="Inicio --:--:--";
-        if(currentParticipation.getStartTime()!=null) {
-            Tiempo = "Inicio " +df.format(currentParticipation.getStartTime());
+        String Tiempo="Duración --:--:--";
+        if (currentParticipation.getStartTime() != null) {
+            Duration duration = Duration.between(currentParticipation.getStartTime().toInstant(),new Date().toInstant());
+            Log.v("duration",duration.toString());
+
+            LocalTime time = LocalTime.MIDNIGHT.plus(duration);
+
+            Log.v("duration",time.format(DateTimeFormatter.ofPattern("HH:mm:ss")));
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+            Tiempo = "Duración " + time.format(formatter);
         }
-        if(currentParticipation.getFinishTime()!=null) {
-            Tiempo = "Fin " +df.format(currentParticipation.getFinishTime());
+        if (currentParticipation.getFinishTime() != null) {
+            Log.v("durationFin",currentParticipation.getStartTime().toString());
+            Log.v("durationFin",currentParticipation.getFinishTime().toString());
+            Duration duration = Duration.between(currentParticipation.getStartTime().toInstant(),currentParticipation.getFinishTime().toInstant());
+            LocalTime time = LocalTime.MIDNIGHT.plus(duration);
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+            Tiempo = "Duración " + time.format(formatter);
         }
+        holder.Tiempo.setText(Tiempo);
         holder.Tiempo.setText(Tiempo);
     }
 

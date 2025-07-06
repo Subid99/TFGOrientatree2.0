@@ -20,6 +20,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.smov.gabriel.orientatree.model.Activity;
 import com.smov.gabriel.orientatree.model.Beacon;
 import com.smov.gabriel.orientatree.model.BeaconReached;
+import com.smov.gabriel.orientatree.model.Participation;
 import com.smov.gabriel.orientatree.model.Template;
 import com.smov.gabriel.orientatree.model.TemplateType;
 import com.smov.gabriel.orientatree.ui.ChallengeActivity;
@@ -29,6 +30,9 @@ import com.tfg.marllor.orientatree.R;
 import java.sql.Time;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 
@@ -40,16 +44,16 @@ public class ReciclerBalizaAdapter extends RecyclerView.Adapter<ReciclerBalizaAd
     private Activity activity;
     private ArrayList<BeaconReached> reaches;
     private Template template;
-    private String participantID;
+    private Participation participation;
     public ReciclerBalizaAdapter(ArrayList<BeaconReached> reaches,
                                  Activity activity,
                                  Template template,
-                                 String participantID) {
+                                 Participation participantID) {
         this.reaches = reaches;
         this.templateID = template.getTemplate_id();
         this.activity = activity;
         this.template = template;
-        this.participantID = participantID;
+        this.participation = participantID;
 
 
     }
@@ -90,6 +94,7 @@ public class ReciclerBalizaAdapter extends RecyclerView.Adapter<ReciclerBalizaAd
                         holder.nombre.setText(beacon.getName());
                                                                     }
                 });
+
         if (!currentBeacon.isAnswered()){
             holder.estadoBaliza.setText("Sin Responder");
             holder.estadoBaliza.setTextColor(Color.GRAY);
@@ -101,8 +106,12 @@ public class ReciclerBalizaAdapter extends RecyclerView.Adapter<ReciclerBalizaAd
             holder.estadoBaliza.setText("Fallo");
             holder.estadoBaliza.setTextColor(Color.RED);
         }
-        String llegada = df.format(currentBeacon.getReachMoment());
-        holder.Llegada.setText(llegada.toString());
+
+        Duration duration = Duration.between(participation.getStartTime().toInstant(),currentBeacon.getReachMoment().toInstant());
+        LocalTime time = LocalTime.MIDNIGHT.plus(duration);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+        //String llegada = df.format(currentBeacon.getReachMoment());
+        holder.Llegada.setText(time.format(formatter));
         holder.NumeroBaliza.setText(String.valueOf(position+1));
         holder.FilaBaliza.setOnClickListener(new View.OnClickListener() {
 
@@ -120,7 +129,7 @@ public class ReciclerBalizaAdapter extends RecyclerView.Adapter<ReciclerBalizaAd
         Intent intent = new Intent(context, ChallengeActivity.class);
         intent.putExtra("beaconID", beaconID);
         intent.putExtra("activity", activity);
-        intent.putExtra("participantID", participantID);
+        intent.putExtra("participantID", participation.getParticipant());
         context.startActivity(intent);
     }
     // This class defines the ViewHolder object for each item in the RecyclerView

@@ -26,12 +26,12 @@
             </androidx.appcompat.widget.Toolbar>
 
         </com.google.android.material.appbar.AppBarLayout>
-
         <fragment
             android:id="@+id/trackMap"
             android:name="com.google.android.gms.maps.SupportMapFragment"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
+
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
@@ -40,7 +40,16 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="16dp">
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycleView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:clipChildren="true"
+            android:clipToPadding="true"
+            android:paddingTop="1dp"
 
+            android:paddingBottom="1dp"
+            tools:listitem="@layout/track_participants" />
         <TextView
             android:id="@+id/trackHour_textView"
             android:layout_width="wrap_content"

@@ -17,6 +17,8 @@ import com.google.android.material.tabs.TabLayout;
 import com.smov.gabriel.orientatree.adapters.ViewPagerAdapter;
 import com.tfg.marllor.orientatree.databinding.VigilanciaActividadActivityBinding;
 
+import java.util.List;
+
 
 public class VigilanciaActividadActivity extends AppCompatActivity {
     private Template template;
@@ -35,13 +37,13 @@ public class VigilanciaActividadActivity extends AppCompatActivity {
         template = (Template) intent.getSerializableExtra("template");
         MapaFragment = new MapOrganizerFragment();
         CardsFragment = new CardsFragment();
-
+        //ListaFragment = new ListaFragment();
         binding = VigilanciaActividadActivityBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         ViewPagerAdapter adaptador = new ViewPagerAdapter(getSupportFragmentManager());
         adaptador.addFragment(MapaFragment, "Mapa");
         adaptador.addFragment(CardsFragment, "General");
-        //adaptador.addFragment(, "pruebaCards");
+        //adaptador.addFragment(ListaFragment, "Cards");
         ViewPager viewPager = binding.viewpager;
         viewPager.setAdapter(adaptador);
         TabLayout tabs = binding.tabs;

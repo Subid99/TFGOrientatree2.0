@@ -1,13 +1,17 @@
 package com.smov.gabriel.orientatree.services;
 
+import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
 import android.media.AudioAttributes;
 import android.media.RingtoneManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.IBinder;
@@ -16,8 +20,18 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresPermission;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ProcessLifecycleOwner;
+import androidx.work.Constraints;
+import androidx.work.Data;
+import androidx.work.NetworkType;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkInfo;
+import androidx.work.WorkManager;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -33,6 +47,9 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.smov.gabriel.orientatree.persistence.AppDatabase;
+import com.smov.gabriel.orientatree.persistence.SyncWorker;
+import com.smov.gabriel.orientatree.persistence.entities.OfflineLocation;
 import com.tfg.marllor.orientatree.R;
 import com.smov.gabriel.orientatree.model.Activity;
 import com.smov.gabriel.orientatree.model.Beacon;
@@ -243,6 +260,7 @@ public class LocationService extends Service {
                                 "finishTime", activity.getFinishTime(),
                                 "completed", false)
                         .addOnSuccessListener(new OnSuccessListener<Void>() {
+                            @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
                             @Override
                             public void onSuccess(Void aVoid) {
                                 // DEBUG
@@ -268,6 +286,19 @@ public class LocationService extends Service {
                     Log.d(TAG, "No quedan balizas por alcanzar y hemos llegado a meta, terminar la actividad");
                     //
                     uploadingReach = true;
+                    uploadingReach = false;
+                    // DEBUG
+                    Log.d(TAG, "Actividad terminada. Todas las balizas alcanzadas. Llegada a meta.");
+                    //
+                    String name = "Meta";
+                    int number = beacons.size() + 1;
+                    String message = "Has completado la actividad";
+                    sendBeaconNotification(message, name, number);
+                    stopSelf();
+                    new Thread(() -> {
+                        AppDatabase.getDatabase(this).participationDao().updateParticipationState(userID, activity.getId(), ParticipationState.FINISHED);
+                        AppDatabase.getDatabase(this).participationDao().updateParticipationFinishTime(userID, activity.getId(), current_time);
+                    }).start();
                     db.collection("activities").document(activity.getId())
                             .collection("participations").document(userID)
                             .update("state", ParticipationState.FINISHED,
@@ -276,15 +307,7 @@ public class LocationService extends Service {
                             .addOnSuccessListener(new OnSuccessListener<Void>() {
                                 @Override
                                 public void onSuccess(Void aVoid) {
-                                    uploadingReach = false;
-                                    // DEBUG
-                                    Log.d(TAG, "Actividad terminada. Todas las balizas alcanzadas. Llegada a meta.");
-                                    //
-                                    String name = "Meta";
-                                    int number = beacons.size() + 1;
-                                    String message = "Has completado la actividad";
-                                    sendBeaconNotification(message, name, number);
-                                    stopSelf();
+
                                 }
                             })
                             .addOnFailureListener(new OnFailureListener() {
@@ -313,6 +336,7 @@ public class LocationService extends Service {
 
     private void updateCurrentLocation(double lat1, double lng1, Date current_time) {
         // update current location (needed to see the track later)
+        //if (isOnline()) {
         com.smov.gabriel.orientatree.model.Location location = new com.smov.gabriel.orientatree.model.Location();
         location.setTime(current_time);
         GeoPoint point = new GeoPoint(lat1, lng1);
@@ -326,8 +350,30 @@ public class LocationService extends Service {
         db.collection("activities").document(activity.getId())
                 .collection("participations").document(userID)
                 .update("lastLocation",point);
-    }
+        /*} else {
+            // Guardar localmente
+            new Thread(() -> {
+                OfflineLocation offlineLoc = new OfflineLocation();
+                offlineLoc.activityId = activity.getId();
+                offlineLoc.userId = userID;
+                offlineLoc.latitude = lat1;
+                offlineLoc.longitude = lng1;
+                offlineLoc.timestamp = current_time.getTime();
 
+                AppDatabase.getDatabase(this).locationDao().insert(offlineLoc);
+
+                // Programar sincronización para cuando haya conexión
+
+            }).start();
+            scheduleSyncWorker();
+        }*/
+    }
+    private boolean isOnline() {
+        ConnectivityManager cm =
+                (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = cm.getActiveNetworkInfo();
+        return netInfo != null && netInfo.isConnectedOrConnecting();
+    }
     private void playScore(double lat1, double lng1, Date current_time) {
         // DEBUG
         Log.d(TAG, "Jugamos Score");
@@ -350,6 +396,16 @@ public class LocationService extends Service {
                         BeaconReached beaconReached = new BeaconReached(current_time, beacon.getBeacon_id(),
                                 false); // create a new BeaconReached
                         uploadingReach = true; // uploading...
+                        beaconsReached.add(beacon.getBeacon_id()); // add the current beacon id to the beacons reached during the service
+                        // DEBUG
+                        Log.d(TAG, "Score: Añadiendo la baliza " + beacon.getBeacon_id() + " al conjunto de alcanzadas " +
+                                "que ahora tiene " + beaconsReached.size() + " elementos");
+                        //
+                        uploadingReach = false; // not uploading any more
+                        String name = beacon.getName();
+                        int number = beacon.getNumber();
+                        String message = "Has alcanzado la baliza " + name;
+                        sendBeaconNotification(message, name, number);
                         db.collection("activities").document(activity.getId())
                                 .collection("participations").document(userID)
                                 .collection("beaconReaches").document(beaconReached.getBeacon_id())
@@ -357,16 +413,7 @@ public class LocationService extends Service {
                                 .addOnSuccessListener(new OnSuccessListener<Void>() {
                                     @Override
                                     public void onSuccess(Void unused) {
-                                        beaconsReached.add(beacon.getBeacon_id()); // add the current beacon id to the beacons reached during the service
-                                        // DEBUG
-                                        Log.d(TAG, "Score: Añadiendo la baliza " + beacon.getBeacon_id() + " al conjunto de alcanzadas " +
-                                                "que ahora tiene " + beaconsReached.size() + " elementos");
-                                        //
-                                        uploadingReach = false; // not uploading any more
-                                        String name = beacon.getName();
-                                        int number = beacon.getNumber();
-                                        String message = "Has alcanzado la baliza " + name;
-                                        sendBeaconNotification(message, name, number);
+
                                     }
                                 })
                                 .addOnFailureListener(new OnFailureListener() {
@@ -409,7 +456,17 @@ public class LocationService extends Service {
                 // if we are close enough and not in the middle of an uploading operation...
                 BeaconReached beaconReached = new BeaconReached(current_time, searchedBeacon.getBeacon_id(),
                         false/*, searchedBeacon.isGoal()*/); // create a new BeaconReached
+                // BeaconReached added to Firestore
+                // DEBUG
+                Log.d(TAG, "Clásica: Alcanzada " + searchedBeacon.getName());
+                //
+                beaconsReached.add(searchedBeacon.getBeacon_id()); // update the set with the reaches
+                String name = searchedBeacon.getName();
+                int number = searchedBeacon.getNumber();
+                String message = "Has alcanzado la baliza " + name;
+                sendBeaconNotification(message, name, number);
                 uploadingReach = true; // uploading...
+                uploadingReach = false;
                 db.collection("activities").document(activity.getId())
                         .collection("participations").document(userID)
                         .collection("beaconReaches").document(beaconReached.getBeacon_id())
@@ -417,16 +474,7 @@ public class LocationService extends Service {
                         .addOnSuccessListener(new OnSuccessListener<Void>() {
                             @Override
                             public void onSuccess(Void unused) {
-                                // BeaconReached added to Firestore
-                                // DEBUG
-                                Log.d(TAG, "Clásica: Alcanzada " + searchedBeacon.getName());
-                                //
-                                beaconsReached.add(searchedBeacon.getBeacon_id()); // update the set with the reaches
-                                String name = searchedBeacon.getName();
-                                int number = searchedBeacon.getNumber();
-                                String message = "Has alcanzado la baliza " + name;
-                                sendBeaconNotification(message, name, number);
-                                uploadingReach = false;
+
                             }
                         })
                         .addOnFailureListener(new OnFailureListener() {
@@ -485,6 +533,7 @@ public class LocationService extends Service {
     }
 
     // send the notification of a regular beacon
+    @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
     private void sendBeaconNotification(String message, String title, int number) {
 
         // 1 create the channel if needed, and set the intent for the action
@@ -602,5 +651,40 @@ public class LocationService extends Service {
         double c = 2 * Math.atan2(Math.sqrt(p), Math.sqrt(1 - p));
         float dist = (float) (earthRadius * c);
         return dist;
+    }
+    private void scheduleSyncWorker() {
+        // Definir restricciones de red
+        Constraints constraints = new Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build();
+
+        // Crear datos de entrada
+        Data inputData = new Data.Builder()
+                .putString("activity_id", activity.getId())
+                .putString("user_id", userID)
+                .build();
+
+        // Crear trabajo de sincronización
+        OneTimeWorkRequest syncWorkRequest =
+                new OneTimeWorkRequest.Builder(SyncWorker.class)
+                        .setConstraints(constraints)
+                        .setInputData(inputData)
+                        .build();
+
+        // Programar el trabajo
+        WorkManager.getInstance(this).enqueue(syncWorkRequest);
+
+        // Opcional: Observar el resultado
+        WorkManager.getInstance(this).getWorkInfoByIdLiveData(syncWorkRequest.getId())
+                .observe(new LifecycleOwner() {
+                    @Override
+                    public Lifecycle getLifecycle() {
+                        return ProcessLifecycleOwner.get().getLifecycle();
+                    }
+                }, workInfo -> {
+                    if (workInfo != null && workInfo.getState() == WorkInfo.State.SUCCEEDED) {
+                        Log.d(TAG, "Sincronización completada con éxito");
+                    }
+                });
     }
 }

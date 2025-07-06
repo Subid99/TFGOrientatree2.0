@@ -85,7 +85,7 @@ public class ReviewActivity extends AppCompatActivity {
                             boton.setOnClickListener(new View.OnClickListener(){
                                 @Override
                                 public void onClick(View v) {
-                                    Toast.makeText(reviewActivity, itemAdapter.getSelectedItems().get(0), Toast.LENGTH_SHORT).show();
+                                    //Toast.makeText(reviewActivity, itemAdapter.getSelectedItems().get(0), Toast.LENGTH_SHORT).show();
                                     for(int i=0;itemAdapter.getSelectedItems().size()>i;i++){
                                     Log.v("participantes",itemAdapter.getSelectedItems().get(i));
                                     }
@@ -93,6 +93,7 @@ public class ReviewActivity extends AppCompatActivity {
                                     intent.putExtra("activity", activity);
                                     intent.putExtra("template", template);
                                     intent.putExtra("participantes", itemAdapter.getSelectedItems());
+                                    intent.putExtra("nombres", itemAdapter.getNombres());
                                     startActivity(intent);
                                 }
                             });

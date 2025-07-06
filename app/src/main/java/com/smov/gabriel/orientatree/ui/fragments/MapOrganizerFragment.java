@@ -1,6 +1,8 @@
 package com.smov.gabriel.orientatree.ui.fragments;
 
+import androidx.annotation.DrawableRes;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.Toolbar;
@@ -11,6 +13,8 @@ import android.content.Intent;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
@@ -228,6 +232,7 @@ public class MapOrganizerFragment extends Fragment  implements OnMapReadyCallbac
                                                 if (punto!= null){
                                                 LatLng participantepunto = new LatLng(punto.getLatitude(),punto.getLongitude());
                                                 Marker marca = mMap.addMarker(new MarkerOptions().position(participantepunto));
+                                                //marca.setIcon(vectorToBitmap(R.drawable.solid_color));
                                                 puntos.add(marca);}}
                                             }
                                             }
@@ -284,6 +289,18 @@ public class MapOrganizerFragment extends Fragment  implements OnMapReadyCallbac
             //Toast.makeText(this, "Algo salió mal al cargar el mapa", Toast.LENGTH_SHORT).show();
         }
         return null;
+    }
+    private BitmapDescriptor vectorToBitmap(@DrawableRes int id) {
+        Drawable vectorDrawable = ContextCompat.getDrawable(this.getContext(), id);
+        Bitmap bitmap = Bitmap.createBitmap(
+                vectorDrawable.getIntrinsicWidth(),
+                vectorDrawable.getIntrinsicHeight(),
+                Bitmap.Config.ARGB_8888
+        );
+        Canvas canvas = new Canvas(bitmap);
+        vectorDrawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+        vectorDrawable.draw(canvas);
+        return BitmapDescriptorFactory.fromBitmap(bitmap);
     }
 
     /*@Override

@@ -3,6 +3,8 @@ package com.smov.gabriel.orientatree.ui;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Context;
 import android.content.ContextWrapper;
@@ -10,6 +12,7 @@ import android.content.Intent;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuItem;
@@ -40,6 +43,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.smov.gabriel.orientatree.adapters.TrackParticipantsAdapter;
 import com.tfg.marllor.orientatree.R;
 import com.tfg.marllor.orientatree.databinding.ActivityTrackBinding;
 import com.smov.gabriel.orientatree.model.Activity;
@@ -72,6 +76,8 @@ public class TrackActivity extends AppCompatActivity implements OnMapReadyCallba
     private Slider track_slider;
     private TextView trackHour_textView;
     private SwitchMaterial trackCompleto_switch;
+    TrackParticipantsAdapter trackParticipantsAdapter;
+    private RecyclerView recyclerView;
 
     // useful model objects
     private Template template;
@@ -87,6 +93,7 @@ public class TrackActivity extends AppCompatActivity implements OnMapReadyCallba
     private static String pattern_hour = "HH:mm:ss";
     private static DateFormat df_hour = new SimpleDateFormat(pattern_hour);
 
+    private ArrayList<String> usernames;
     // arraylist with the locations
     private ArrayList<Location> locations;
     private ArrayList<ArrayList> localizaciones;
@@ -116,12 +123,12 @@ public class TrackActivity extends AppCompatActivity implements OnMapReadyCallba
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.trackMap);
         mapFragment.getMapAsync(this);
-
         // getting the intent
         Intent intent = getIntent();
         template = (Template) intent.getSerializableExtra("template");
         activity = (Activity) intent.getSerializableExtra("activity");
         usuarios = intent.getExtras().getStringArrayList("participantes");
+        usernames = intent.getExtras().getStringArrayList("nombres");
         for (int i = 0; usuarios.size() > i; i++) {
             Log.v("participantes", usuarios.get(i));
         }
@@ -136,6 +143,10 @@ public class TrackActivity extends AppCompatActivity implements OnMapReadyCallba
         track_slider = findViewById(R.id.track_slider);
         trackHour_textView = findViewById(R.id.trackHour_textView);
         trackCompleto_switch = findViewById(R.id.trackComplete_switch);
+        recyclerView = findViewById(R.id.recycleView);
+        trackParticipantsAdapter = new TrackParticipantsAdapter(this, usernames);
+        recyclerView.setAdapter(trackParticipantsAdapter);
+        recyclerView.setLayoutManager(new LinearLayoutManager(TrackActivity.this));
 
         // set the toolbar
         setSupportActionBar(toolbar);
@@ -147,7 +158,6 @@ public class TrackActivity extends AppCompatActivity implements OnMapReadyCallba
         track_slider.addOnChangeListener(new Slider.OnChangeListener() {
             @Override
             public void onValueChange(@NonNull @NotNull Slider slider, float value, boolean fromUser) {
-                Log.v("slider", "value: " + value);
                 Duration pctTiempo = duracionMax.dividedBy(100).multipliedBy((int)value);
                 for(int i = 0; i < polylinesPartial.size();i++){
                 if (polylinesPartial.get(i) != null && localizaciones.get(i) != null) {
@@ -284,6 +294,7 @@ public class TrackActivity extends AppCompatActivity implements OnMapReadyCallba
                                 Log.v("localizaciones", "tamaño usuarios " +  String.valueOf(usuarios.size()));
                                 for (int i = 0; i < usuarios.size(); i++) {
                                     ArrayList<Location> localizacion = new ArrayList<>();
+                                    int position = i;
                                     db.collection("activities").document(activityID)
                                             .collection("participations").document(usuarios.get(i))
                                             .collection("locations")
@@ -309,7 +320,13 @@ public class TrackActivity extends AppCompatActivity implements OnMapReadyCallba
                                                                             localizacion.get(0).getLocation().getLongitude()));
                                                             polylineParcial = mMap.addPolyline(polylineOptions); // draw point at the start (partial track)
                                                             polylineParcial.setWidth(15);
-
+                                                            int colorResId;
+                                                            switch(position % 3) {
+                                                                case 0: colorResId = Color.parseColor("#FF5722"); break;
+                                                                case 1: colorResId = Color.parseColor("#0492C2"); break;
+                                                                default: colorResId = Color.parseColor("#4CBB17");
+                                                            }
+                                                            polylineParcial.setColor(colorResId);
                                                                  // enable slider
 
                                                             // setting complete track

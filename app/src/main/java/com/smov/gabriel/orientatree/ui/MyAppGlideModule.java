@@ -1,7 +1,6 @@
 package com.smov.gabriel.orientatree.ui;
 
 import android.content.Context;
-import android.util.Log;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.Registry;
@@ -20,7 +19,6 @@ public class MyAppGlideModule extends AppGlideModule {
 
     @Override
     public void registerComponents(Context context, Glide glide, Registry registry) {
-        Log.v("Hola",this.getClass().getSimpleName());
         // Register FirebaseImageLoader to handle StorageReference
         registry.append(StorageReference.class, InputStream.class,
                 new FirebaseImageLoader.Factory());

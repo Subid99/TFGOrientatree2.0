@@ -15,6 +15,9 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
+import android.text.InputFilter;
+import android.text.LoginFilter;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -144,6 +147,12 @@ public class MapParticipantFragment extends Fragment implements OnMapReadyCallba
         });
         */
         // realtime listener to display the timer
+        if (activity== null || template == null || userID == null){
+            Log.v("MapParticipantFragment", "activity or template or userID is null");
+            Log.v("MapParticipantFragment", "activity: " + activity);
+            Log.v("MapParticipantFragment", "template: " + template);
+            Log.v("MapParticipantFragment", "userID: " + userID);
+        }
         if (activity != null && template != null && userID != null
             /*&& template.getType() == TemplateType.DEPORTIVA*/) {
             db.collection("activities").document(activity.getId())
