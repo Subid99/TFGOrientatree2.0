@@ -41,7 +41,7 @@ public class ParticipantNewAdapter extends RecyclerView.Adapter<ParticipantNewAd
     public void onBindViewHolder(MyViewHolder holder, int position) {
         Participation currentParticipation = emplist.get(position);
         holder.nombre.setText(currentParticipation.getParticipant());
-        holder.Balizas.setText(currentParticipation.getResults());
+        holder.Balizas.setText(currentParticipation.obtenerResultados());
         holder.estadoParticipacion.setText(currentParticipation.getState().toString());
     }
 

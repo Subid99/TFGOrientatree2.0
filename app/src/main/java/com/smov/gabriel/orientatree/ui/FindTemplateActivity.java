@@ -85,7 +85,7 @@ public class FindTemplateActivity extends AppCompatActivity implements Navigatio
                 //At this point you should start the login activity and finish this one
                 updateUIIdentification();
             }
-        }, intentFilter);
+        }, intentFilter,Context.RECEIVER_NOT_EXPORTED);
         //** **//
 
         db = FirebaseFirestore.getInstance();

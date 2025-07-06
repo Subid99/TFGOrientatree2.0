@@ -1,12 +1,5 @@
 package com.smov.gabriel.orientatree.ui;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
-import androidx.coordinatorlayout.widget.CoordinatorLayout;
-import androidx.core.app.ActivityCompat;
-
 import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -17,6 +10,8 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.location.Location;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -25,6 +20,19 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.coordinatorlayout.widget.CoordinatorLayout;
+import androidx.core.app.ActivityCompat;
+import androidx.work.Constraints;
+import androidx.work.Data;
+import androidx.work.NetworkType;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkInfo;
+import androidx.work.WorkManager;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
@@ -46,6 +54,12 @@ import com.google.firebase.storage.FileDownloadTask;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.OnProgressListener;
 import com.google.firebase.storage.StorageReference;
+import com.google.gson.Gson;
+import com.smov.gabriel.orientatree.persistence.AppDatabase;
+import com.smov.gabriel.orientatree.persistence.Converters;
+import com.smov.gabriel.orientatree.persistence.daos.ParticipationUpdateWorker;
+import com.smov.gabriel.orientatree.persistence.entities.OfflineParticipation;
+import com.smov.gabriel.orientatree.persistence.entities.OfflineTemplate;
 import com.tfg.marllor.orientatree.R;
 import com.smov.gabriel.orientatree.helpers.ActivityTime;
 import com.smov.gabriel.orientatree.model.Activity;
@@ -63,11 +77,20 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 
 public class NowActivity extends AppCompatActivity {
 
-    // UI elements
+    // Constants
+    private static final int FINE_LOCATION_ACCESS_REQUEST_CODE = 1001;
+    private static final float LOCATION_PRECISION = 1000f;
+    private static final String pattern_hour = "HH:mm";
+    private static final String pattern_day = "dd/MM/yyyy";
+    private static final DateFormat df_hour = new SimpleDateFormat(pattern_hour);
+    private static final DateFormat df_date = new SimpleDateFormat(pattern_day);
+
+    // UI Elements
     private TextView nowType_textView, nowTitle_textView, nowTime_textView, nowOrganizer_textView,
             nowTemplate_textView, nowDescription_textView, nowNorms_textView,
             nowLocation_textView, nowMode_textView, nowState_textView;
@@ -79,69 +102,57 @@ public class NowActivity extends AppCompatActivity {
     private CoordinatorLayout now_coordinatorLayout;
     private CircularProgressIndicator now_progressIndicator;
 
-    // declaring Firebase services
+    // Firebase Services
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
     private FirebaseStorage firebaseStorage;
     private StorageReference storageReference;
 
-    // some model objects required
+    // Model Objects
     private Activity activity;
     private Template template;
     private User user;
     private Participation participation;
 
-    // some useful IDs
+    // IDs and Flags
     private String userID;
     private String organizerID;
-
-    // here we represent whether the current user is the organizer of the activity or not
     private boolean isOrganizer = false;
-
-    // formatters
-    // to format the way hours are displayed
-    private static String pattern_hour = "HH:mm";
-    private static DateFormat df_hour = new SimpleDateFormat(pattern_hour);
-    // to format the way dates are displayed
-    private static String pattern_day = "dd/MM/yyyy";
-    private static DateFormat df_date = new SimpleDateFormat(pattern_day);
-
-    // location permissions
-    // constant that represents query for fine location permission
-    private static final int FINE_LOCATION_ACCESS_REQUEST_CODE = 1001;
-    // this is true or false depending on whether we have location permissions or not
     private boolean havePermissions = false;
 
-    // needed to check that the user is at the start spot
+    // Location Services
     private FusedLocationProviderClient fusedLocationClient;
-
-    // intent to the location service that runs in foreground while the activity is on
     private Intent locationServiceIntent;
-
-    // threshold precision in meters to consider that the user is at the start spot
-    private static final float LOCATION_PRECISION = 1000f;
-
-    /* here we store the information of the time of te activity so that we know if it was in the past
-     * or it is taking place now, or if it is in the future */
     private ActivityTime activityTime;
+    private AppDatabase localDb;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        Log.v("Hola",this.getClass().getSimpleName());
+        Log.v("Hola", this.getClass().getSimpleName());
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_now);
 
-        // get the activity from the intent
+        initializeActivityData();
+        bindUIElements();
+        initializeFirebaseServices();
+        setupToolbar();
+        setupLocationServices();
+        setupUI();
+        setupListeners();
+    }
+
+    private void initializeActivityData() {
         Intent intent = getIntent();
         activity = (Activity) intent.getSerializableExtra("activity");
-        // get if the activity is in the past, present or future
         activityTime = getActivityTime();
+        userID = FirebaseAuth.getInstance().getCurrentUser().getUid();
+    }
 
-        // binding UI elements
+    private void bindUIElements() {
         toolbar = findViewById(R.id.now_toolbar);
-        nowCredentials_button = findViewById(R.id.nowCredentials_button); // only visible to organizer
-        nowParticipant_extendedFab = findViewById(R.id.nowParticipant_extendedFab); // only visible to participant
-        nowSeeParticipants_extendedFab = findViewById(R.id.nowSeeParticipants_extendedFab); // only visible to organizer
+        nowCredentials_button = findViewById(R.id.nowCredentials_button);
+        nowParticipant_extendedFab = findViewById(R.id.nowParticipant_extendedFab);
+        nowSeeParticipants_extendedFab = findViewById(R.id.nowSeeParticipants_extendedFab);
         nowType_textView = findViewById(R.id.nowType_textView);
         nowTitle_textView = findViewById(R.id.nowTitle_textView);
         nowTime_textView = findViewById(R.id.nowTime_textView);
@@ -157,9 +168,17 @@ public class NowActivity extends AppCompatActivity {
         now_progressIndicator = findViewById(R.id.now_progressIndicator);
         nowDownloadMap_extendedFab = findViewById(R.id.nowDownloadMap_extendedFab);
         nowMap_button = findViewById(R.id.nowMap_button);
+    }
 
-        // set the toolbar
-        toolbar = findViewById(R.id.now_toolbar);
+    private void initializeFirebaseServices() {
+        db = FirebaseFirestore.getInstance();
+        mAuth = FirebaseAuth.getInstance();
+        firebaseStorage = FirebaseStorage.getInstance();
+        storageReference = firebaseStorage.getReference();
+        localDb = AppDatabase.getDatabase(this);
+    }
+
+    private void setupToolbar() {
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         switch (activityTime) {
@@ -172,651 +191,678 @@ public class NowActivity extends AppCompatActivity {
             case FUTURE:
                 getSupportActionBar().setTitle("Actividad prevista");
                 break;
-            default:
-                break;
         }
+    }
 
-        // initializing Firebase services
-        db = FirebaseFirestore.getInstance();
-        mAuth = FirebaseAuth.getInstance();
-        firebaseStorage = FirebaseStorage.getInstance();
-        storageReference = firebaseStorage.getReference();
-
-        // location services initialization
+    private void setupLocationServices() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-
-        // set intent to location foreground service
         locationServiceIntent = new Intent(this, LocationService.class);
+    }
 
-        // get the current user's ID
-        userID = mAuth.getCurrentUser().getUid();
-
-        // check that the activity is not null
-        if (activity != null) {
-            organizerID = activity.getPlanner_id();
-            if (organizerID.equals(userID)
-                    && !activity.getParticipants().contains(userID)) {
-                // if the current user is the organizer
-                isOrganizer = true;
-            } else if (!organizerID.equals(userID)
-                    && activity.getParticipants().contains(userID)) {
-                // if the current user is a participant...
-                isOrganizer = false;
-            } else {
-                Toast.makeText(this, "Algo salió mal al " +
-                        "obtener el organizador de la actividad. Sal y vuelve a intentarlo", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            // if the activity is not null, set the UI, otherwise tell the user and do nothing
-            nowTitle_textView.setText(activity.getTitle());
-            if (activity.isScore()) {
-                nowMode_textView.append("score");
-            } else {
-                nowMode_textView.append("orientación clásica");
-            }
-            String timeString = "";
-            // append start and finish hours
-            timeString = timeString + df_hour.format(activity.getStartTime()) + " - " +
-                    df_hour.format(activity.getFinishTime());
-            // append date
-            timeString = timeString + " (" + df_date.format(activity.getStartTime()) + ")";
-            nowTime_textView.setText(timeString);
-            // get and set the activity image
-            StorageReference ref = storageReference.child("templateImages/" + activity.getTemplate() + ".jpg");
-            Glide.with(this)
-                    .load(ref)
-                    .diskCacheStrategy(DiskCacheStrategy.NONE) // prevent caching
-                    .skipMemoryCache(true) // prevent caching
-                    .into(now_imageView);
-            // get the template of the activity
-            db.collection("templates").document(activity.getTemplate())
-                    .get()
-                    .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
-                        @Override
-                        public void onSuccess(DocumentSnapshot documentSnapshot) {
-                            template = documentSnapshot.toObject(Template.class);
-                            if (template != null) {
-                                // get the data from the template
-                                nowType_textView.setText(template.getType().toString());
-                                if (template.getType() == TemplateType.EDUCATIVA &&
-                                        template.getColor() != null) {
-                                    nowType_textView.append(" " + template.getColor());
-                                }
-                                nowDescription_textView.setText(template.getDescription());
-                                nowTemplate_textView.append(template.getName());
-                                nowLocation_textView.append(template.getLocation());
-                                nowNorms_textView.setText(template.getNorms());
-                                // now that we have all the data from both the activity and the template, perform specific
-                                // actions depending on whether the user is the organizer or a participant
-                                if (isOrganizer) {
-                                    // if organizer:
-                                    // 1) disable options that are in any case only for participants
-                                    nowParticipant_extendedFab.setEnabled(false);
-                                    nowParticipant_extendedFab.setVisibility(View.GONE);
-                                    nowState_textView.setVisibility(View.GONE);
-                                    // 2) enable options that are in any case enabled for organizer
-                                    // always enable the button to see the credentials
-                                    // always enable see map button
-                                    nowCredentials_button.setEnabled(true);
-                                    nowCredentials_button.setVisibility(View.VISIBLE);
-                                    //nowMap_button.setEnabled(true);
-                                    //nowMap_button.setVisibility(View.VISIBLE);
-                                    // 2.1) check if we need to change the text of the see participants FAB
-                                    switch (activityTime) {
-                                        case PAST:
-                                            // if the activity is past
-                                            if (template.getType() == TemplateType.DEPORTIVA) {
-                                                // if it was DEPORTIVA, show as classification button
-                                                nowSeeParticipants_extendedFab.setText("Clasificación");
-                                                nowSeeParticipants_extendedFab.setIcon(getResources().getDrawable(R.drawable.ic_trophy));
-                                            }
-                                            break;
-                                        default:
-                                            break;
-                                    }
-                                    // always enable the see participants FAB
-                                    nowSeeParticipants_extendedFab.setEnabled(true);
-                                    nowSeeParticipants_extendedFab.setVisibility(View.VISIBLE);
-                                } else {
-                                    // if participant:
-                                    // 1) disable organizer options
-                                    nowCredentials_button.setEnabled(false);
-                                    nowCredentials_button.setVisibility(View.GONE);
-                                    // enable or disable FABS depending on the time
-                                    switch (activityTime) {
-                                        case PAST:
-                                            if (template.getType() == TemplateType.DEPORTIVA) {
-                                                nowSeeParticipants_extendedFab.setText("Clasificación");
-                                                nowSeeParticipants_extendedFab.setIcon(getResources().getDrawable(R.drawable.ic_trophy));
-                                                nowSeeParticipants_extendedFab.setEnabled(true);
-                                                nowSeeParticipants_extendedFab.setVisibility(View.VISIBLE);
-                                            }
-                                            nowParticipant_extendedFab.setEnabled(false);
-                                            nowParticipant_extendedFab.setVisibility(View.GONE);
-                                            nowState_textView.setVisibility(View.GONE);
-                                            break;
-                                        case ONGOING:
-                                            nowSeeParticipants_extendedFab.setEnabled(false);
-                                            nowSeeParticipants_extendedFab.setVisibility(View.GONE);
-                                            break;
-                                        case FUTURE:
-                                            nowSeeParticipants_extendedFab.setEnabled(false);
-                                            nowSeeParticipants_extendedFab.setVisibility(View.GONE);
-                                            nowParticipant_extendedFab.setEnabled(false);
-                                            nowParticipant_extendedFab.setVisibility(View.GONE);
-                                            nowState_textView.setVisibility(View.GONE);
-                                            break;
-                                        default:
-                                            break;
-                                    }
-                                    // 2) set listener to the participations collection to know which participant options
-                                    // should be enabled
-                                    db.collection("activities").document(activity.getId())
-                                            .collection("participations").document(userID)
-                                            .addSnapshotListener(new EventListener<DocumentSnapshot>() {
-                                                @Override
-                                                public void onEvent(@Nullable DocumentSnapshot snapshot,
-                                                                    @Nullable FirebaseFirestoreException e) {
-                                                    if (e != null) {
-                                                        /*Toast.makeText(NowActivity.this, "Algo salió mal al obtener la participación. " +
-                                                                "Sal y vuelve a intentarlo.", Toast.LENGTH_SHORT).show();*/
-                                                        return;
-                                                    }
-                                                    if (snapshot != null && snapshot.exists()) {
-                                                        participation = snapshot.toObject(Participation.class);
-                                                        //only fot testing
-                                                        /*if(mapDownloaded()) {
-                                                            deleteMap();
-                                                        }*/
-                                                        if (activityTime == ActivityTime.ONGOING) {
-                                                            if (mapDownloaded()) {
-                                                                // if map already downloaded
-                                                                enableRightParticipantOptions();
-                                                            } else {
-                                                                // if map not yet downloaded
-                                                                // we only enable the option of downloading the map
-                                                                nowDownloadMap_extendedFab.setEnabled(true);
-                                                                nowDownloadMap_extendedFab.setVisibility(View.VISIBLE);
-                                                                switch (participation.getState()) {
-                                                                    case NOT_YET:
-                                                                        nowState_textView.setText("Estado: no comenzada");
-                                                                        break;
-                                                                    case NOW:
-                                                                        nowState_textView.setText("Estado: aún no terminada");
-                                                                        break;
-                                                                    case FINISHED:
-                                                                        nowState_textView.setText("Estado: terminada");
-                                                                        break;
-                                                                }
-
-                                                            }
-                                                        } else {
-                                                            enableRightParticipantOptions();
-                                                        }
-                                                    } else {
-                                                        /*Toast.makeText(NowActivity.this, "Algo salió mal al obtener la participación. " +
-                                                                "Sal y vuelve a intentarlo.", Toast.LENGTH_SHORT).show();*/
-                                                    }
-                                                }
-                                            });
-                                    // in order to track location we have to check if we have at least one of the following permissions...
-                                    // so if the user is a participant we make this checking
-                                    if (ActivityCompat.checkSelfPermission(NowActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                                            && ActivityCompat.checkSelfPermission(NowActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                                        // if we don't...
-                                        requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, FINE_LOCATION_ACCESS_REQUEST_CODE);
-                                    } else {
-                                        // if we do...
-                                        havePermissions = true;
-                                    }
-                                }
-                                // get the organizer for we need his/her name and surname
-                                db.collection("users").document(organizerID)
-                                        .get()
-                                        .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
-                                            @Override
-                                            public void onSuccess(DocumentSnapshot documentSnapshot) {
-                                                user = documentSnapshot.toObject(User.class);
-                                                nowOrganizer_textView.append(user.getName() + " " + user.getSurname());
-                                            }
-                                        });
-                            } else {
-                                // if the template is null
-                                Toast.makeText(NowActivity.this, "Algo salió mal al cargar la actividad. Sal y vuelve a intentarlo", Toast.LENGTH_SHORT).show();
-                                return;
-                            }
-                        }
-                    })
-                    .addOnFailureListener(new OnFailureListener() {
-                        @Override
-                        public void onFailure(@NonNull @NotNull Exception e) {
-                            // if we couldn't read the template
-                            Toast.makeText(NowActivity.this, "Algo salió mal al cargar la actividad. Sal y vuelve a intentarlo", Toast.LENGTH_SHORT).show();
-                            return;
-                        }
-                    });
-        } else {
-            // if the activity is null
+    private void setupUI() {
+        if (activity == null) {
             Toast.makeText(this, "Algo salió mal al cargar la actividad. Sal y vuelve a intentarlo", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // participant FAB listener
-        nowParticipant_extendedFab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (havePermissions) {
-                    // if the user has given the permissions required...
-                    // check that the activity has not finished yet (it could have, in the meantime while
-                    // the user was reading the rules, for example)
-                    Date current_time = new Date(System.currentTimeMillis());
-                    if (current_time.before(activity.getFinishTime())) {
-                        // if the activity has not yet finished
-                        new MaterialAlertDialogBuilder(NowActivity.this)
-                                .setMessage("¿Deseas comenzar/retomar la actividad? Solo deberías " +
-                                        "hacerlo si el/la organizador/a ya te ha dado la salida")
-                                .setNegativeButton("Cancelar", null)
-                                .setPositiveButton("Comenzar", new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        now_progressIndicator.setVisibility(View.VISIBLE);
-                                        // 1) get location
-                                        try {
-                                            fusedLocationClient.getLastLocation()
-                                                    .addOnSuccessListener(NowActivity.this, new OnSuccessListener<Location>() {
-                                                        @Override
-                                                        public void onSuccess(Location location) {
-                                                            if (location != null) {
-                                                                // 2) check that we are close to the start spot or that we already started the activity
-                                                                // (in such case, we don't have to check that we are at the start spot)
-                                                                float diff = getDistance(location.getLatitude(), template.getStart_lat(),
-                                                                        location.getLongitude(), template.getStart_lng());
-                                                                if ((diff <= LOCATION_PRECISION
-                                                                        && participation.getState() == ParticipationState.NOT_YET)
-                                                                        || participation.getState() == ParticipationState.NOW) {
-                                                                    // 3) if we are near enough, or if we had already started, continue to charge the map
-                                                                    StorageReference reference = storageReference.child("maps/" + activity.getTemplate() + ".png");
-                                                                    if (!LocationService.executing) {
-                                                                        // now we have to do different things depending on whether the participation
-                                                                        // is at NOT_YET or at NOW
-                                                                        switch (participation.getState()) {
-                                                                            case NOT_YET:
-                                                                                // get current time
-                                                                                long millis = System.currentTimeMillis();
-                                                                                Date current_time = new Date(millis);
-                                                                                // update the start time
-                                                                                db.collection("activities").document(activity.getId())
-                                                                                        .collection("participations").document(userID)
-                                                                                        .update("state", ParticipationState.NOW,
-                                                                                                "startTime", current_time)
-                                                                                        .addOnSuccessListener(new OnSuccessListener<Void>() {
-                                                                                            @Override
-                                                                                            public void onSuccess(Void unused) {
-                                                                                                now_progressIndicator.setVisibility(View.GONE);
-                                                                                                // hide the button
-                                                                                                nowParticipant_extendedFab.setEnabled(false);
-                                                                                                nowParticipant_extendedFab.setVisibility(View.GONE);
-                                                                                                // start service
-                                                                                                locationServiceIntent.putExtra("activity", activity);
-                                                                                                locationServiceIntent.putExtra("template", template);
-                                                                                                startService(locationServiceIntent);
-                                                                                                // enable see map button (just in case that the user wants
-                                                                                                // to go back and forth between this and the map activity)
-                                                                                                nowMap_button.setEnabled(true);
-                                                                                                nowMap_button.setVisibility(View.VISIBLE);
-                                                                                                // update UI
-                                                                                                updateUIMap();
-                                                                                            }
-                                                                                        })
-                                                                                        .addOnFailureListener(new OnFailureListener() {
-                                                                                            @Override
-                                                                                            public void onFailure(@NonNull @NotNull Exception e) {
-                                                                                                now_progressIndicator.setVisibility(View.GONE);
-                                                                                                showSnackBar("Error al comenzar la actividad. Inténtalo de nuevo.");
-                                                                                            }
-                                                                                        });
-                                                                                break;
-                                                                            case NOW:
-                                                                                now_progressIndicator.setVisibility(View.GONE);
-                                                                                // hide button
-                                                                                nowParticipant_extendedFab.setEnabled(false);
-                                                                                nowParticipant_extendedFab.setVisibility(View.GONE);
-                                                                                // start service
-                                                                                locationServiceIntent.putExtra("activity", activity);
-                                                                                locationServiceIntent.putExtra("template", template);
-                                                                                startService(locationServiceIntent);
-                                                                                // update UI
-                                                                                updateUIMap();
-                                                                                break;
-                                                                            default:
-                                                                                now_progressIndicator.setVisibility(View.GONE);
-                                                                                Toast.makeText(NowActivity.this, "Parece que la actividad ya ha terminado", Toast.LENGTH_SHORT).show();
-                                                                                break;
-                                                                        }
-                                                                    } else {
-                                                                        now_progressIndicator.setVisibility(View.GONE);
-                                                                        Toast.makeText(NowActivity.this, "No se pudo iniciar la actividad... ya ha un servicio ejecutándose", Toast.LENGTH_SHORT).show();
-                                                                    }
-                                                                } else {
-                                                                    // too far from the start spot
-                                                                    now_progressIndicator.setVisibility(View.GONE);
-                                                                    int diff_meters = (int) diff;
-                                                                    showSnackBar("Estás demasiado lejos de la salida (" + diff_meters + "). Acércate" +
-                                                                            " a ella y vuelve a intentarlo");
-                                                                }
-                                                            } else {
-                                                                now_progressIndicator.setVisibility(View.GONE);
-                                                                Toast.makeText(NowActivity.this, "Hubo algún problema al obtener la ubicación. Vuelve a intentarlo.", Toast.LENGTH_SHORT).show();
-                                                            }
-                                                        }
-                                                    });
-                                        } catch (SecurityException e) {
-                                            showSnackBar("Parece que hay algún problema con los permisos de ubicación");
-                                        }
-                                    }
-                                })
-                                .show();
-                    } else {
-                        // if the activity has already finished
-                        nowParticipant_extendedFab.setEnabled(false);
-                        nowParticipant_extendedFab.setVisibility(View.GONE);
-                        showSnackBar("Esta actividad ya ha terminado");
-                    }
+        organizerID = activity.getPlanner_id();
+        isOrganizer = organizerID.equals(userID) && !activity.getParticipants().contains(userID);
+
+        nowTitle_textView.setText(activity.getTitle());
+        nowMode_textView.append(activity.isScore() ? "score" : "orientación clásica");
+
+        String timeString = df_hour.format(activity.getStartTime()) + " - " +
+                df_hour.format(activity.getFinishTime()) +
+                " (" + df_date.format(activity.getStartTime()) + ")";
+        nowTime_textView.setText(timeString);
+
+        loadActivityImage(activity.getTemplate());
+        loadTemplateData();
+        checkLocationPermissions();
+    }
+
+    private void loadActivityImage(String templateId) {
+        File localFile = new File(this.getFilesDir(), "template_" + templateId + ".jpg");
+
+        if (localFile.exists()) {
+            Log.v("ImageDownload", "ExisteImage"+localFile.getPath());
+            Glide.with(this)
+                    .load(localFile)
+                    .into(now_imageView);
+        } else {
+            // Si no existe localmente, cargar desde Firebase Storage (si hay conexión)
+            if (isOnline()) {
+                StorageReference ref = storageReference.child("templateImages/" + activity.getTemplate() + ".jpg");
+                Glide.with(this)
+                        .load(ref)
+                        .diskCacheStrategy(DiskCacheStrategy.NONE)
+                        .skipMemoryCache(true)
+                        .into(now_imageView);
+            } else {
+                // Mostrar placeholder si no hay conexión ni imagen local
+                Glide.with(this)
+                        .load(R.drawable.ic_peacock)
+                        .into(now_imageView);
+            }
+        }
+    }
+
+    private void loadTemplateData() {
+        // Primero intentar cargar desde la base de datos local
+        new Thread(() -> {
+            OfflineTemplate localTemplate = localDb.templateDao().getTemplateById(activity.getTemplate());
+
+            if (localTemplate != null) {
+                // Convertir la entidad a modelo y actualizar UI
+                Template template = convertToTemplate(localTemplate);
+                updateTemplateUI(template);
+            } else {
+                // Si no está localmente, intentar desde Firestore (si hay conexión)
+                if (isOnline()) {
+                    loadTemplateFromFirestore();
                 } else {
-                    // if we don't have the permissions we ask for them
-                    requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, FINE_LOCATION_ACCESS_REQUEST_CODE);
+                    showErrorAndReturn("No se encontraron datos locales y no hay conexión disponible");
                 }
             }
-        });
+        }).start();
+    }
 
-        // organizer FAB listener
-        nowSeeParticipants_extendedFab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (template != null && activity != null) {
-                    updateUIParticipants();
-                } else {
-                    Toast.makeText(NowActivity.this, "No se pudo completar la acción. Sal y vuelve a intentarlo", Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
-
-        // download map listener
-        nowDownloadMap_extendedFab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                final ProgressDialog pd = new ProgressDialog(NowActivity.this);
-                pd.setTitle("Cargando el mapa...");
-                pd.show();
-                StorageReference reference = storageReference.child("maps/" + activity.getTemplate() + ".png");
-                try {
-                    // try to read the map image from Firebase into a file
-                    File localFile = File.createTempFile("images", "png");
-                    reference.getFile(localFile)
-                            .addOnSuccessListener(new OnSuccessListener<FileDownloadTask.TaskSnapshot>() {
-                                @Override
-                                public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot) {
-                                    // we downloaded the map successfully
-                                    // read the downloaded file into a bitmap
-                                    Bitmap bmp = BitmapFactory.decodeFile(localFile.getAbsolutePath());
-                                    // save the bitmap to a file
-                                    ContextWrapper cw = new ContextWrapper(getApplicationContext());
-                                    // path to /data/data/yourapp/app_data/imageDir
-                                    File directory = cw.getDir("imageDir", Context.MODE_PRIVATE);
-                                    // Create imageDir
-                                    //File mypath = new File(directory, activity.getId() + ".png");
-                                    File mypath = new File(directory, activity.getTemplate() + ".png");
-                                    FileOutputStream fos = null;
-                                    try {
-                                        fos = new FileOutputStream(mypath);
-                                        // Use the compress method on the BitMap object to write image to the OutputStream
-                                        bmp.compress(Bitmap.CompressFormat.PNG, 100, fos);
-                                        showSnackBar("Mapa descargado con éxito, ya puedes comenzar la actividad");
-                                        // disable the download map option and enable the others
-                                        nowDownloadMap_extendedFab.setVisibility(View.GONE);
-                                        nowDownloadMap_extendedFab.setEnabled(false);
-                                        enableRightParticipantOptions();
-                                    } catch (Exception e) {
-                                        e.printStackTrace();
-                                        showSnackBar("Algo salió mal al cargar el mapa. Sal y vuelve a intentarlo.");
-                                    } finally {
-                                        try {
-                                            fos.close();
-                                        } catch (IOException e) {
-                                            e.printStackTrace();
-                                        }
-                                    }
-                                    pd.dismiss();
-                                }
-                            })
-                            .addOnFailureListener(new OnFailureListener() {
-                                @Override
-                                public void onFailure(@NonNull Exception e) {
-                                    pd.dismiss();
-                                    showSnackBar("Algo salió mal al cargar el mapa. Sal y vuelve a intentarlo.");
-                                }
-                            })
-                            .addOnProgressListener(new OnProgressListener<FileDownloadTask.TaskSnapshot>() {
-                                @Override
-                                public void onProgress(@NonNull @NotNull FileDownloadTask.TaskSnapshot snapshot) {
-                                    double progressPercent = (100.00 * snapshot.getBytesTransferred() / snapshot.getTotalByteCount());
-                                    if (progressPercent <= 90) {
-                                        pd.setMessage("Progreso: " + (int) progressPercent + "%");
-                                    } else {
-                                        pd.setMessage("Descargado. Espera unos instantes mientras el mapa se guarda en el dispositivo");
-                                    }
-                                }
-                            });
-                } catch (IOException e) {
-                    pd.dismiss();
-                    showSnackBar("Algo salió mal al cargar el mapa. Sal y vuelve a intentarlo.");
-                }
-            }
-        });
-
-        // see map button listener
-        nowMap_button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(activity.getPlanner_id().equals(userID)) {
-                    // if current user is the organizer
-                    if(mapDownloaded()) {
-                        // if the map is already downloaded
-                        updateUIOrganizerMap();
-                    } else {
-                        // if the map is not yet downloaded
-                        final ProgressDialog pd = new ProgressDialog(NowActivity.this);
-                        pd.setTitle("Cargando el mapa...");
-                        pd.show();
-                        StorageReference reference = storageReference.child("maps/" + activity.getTemplate() + ".png");
-                        try {
-                            // try to read the map image from Firebase into a file
-                            File localFile = File.createTempFile("images", "png");
-                            reference.getFile(localFile)
-                                    .addOnSuccessListener(new OnSuccessListener<FileDownloadTask.TaskSnapshot>() {
-                                        @Override
-                                        public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot) {
-                                            // we downloaded the map successfully
-                                            // read the downloaded file into a bitmap
-                                            Bitmap bmp = BitmapFactory.decodeFile(localFile.getAbsolutePath());
-                                            // save the bitmap to a file
-                                            ContextWrapper cw = new ContextWrapper(getApplicationContext());
-                                            // path to /data/data/yourapp/app_data/imageDir
-                                            File directory = cw.getDir("imageDir", Context.MODE_PRIVATE);
-                                            // Create imageDir
-                                            //File mypath = new File(directory, activity.getId() + ".png");
-                                            File mypath = new File(directory, activity.getTemplate() + ".png");
-                                            FileOutputStream fos = null;
-                                            try {
-                                                fos = new FileOutputStream(mypath);
-                                                // Use the compress method on the BitMap object to write image to the OutputStream
-                                                bmp.compress(Bitmap.CompressFormat.PNG, 100, fos);
-                                                updateUIOrganizerMap();
-                                            } catch (Exception e) {
-                                                e.printStackTrace();
-                                                showSnackBar("Algo salió mal al cargar el mapa. Sal y vuelve a intentarlo.");
-                                            } finally {
-                                                try {
-                                                    fos.close();
-                                                } catch (IOException e) {
-                                                    e.printStackTrace();
-                                                }
-                                            }
-                                            pd.dismiss();
-                                        }
-                                    })
-                                    .addOnFailureListener(new OnFailureListener() {
-                                        @Override
-                                        public void onFailure(@NonNull Exception e) {
-                                            pd.dismiss();
-                                            showSnackBar("Algo salió mal al cargar el mapa. Sal y vuelve a intentarlo.");
-                                        }
-                                    })
-                                    .addOnProgressListener(new OnProgressListener<FileDownloadTask.TaskSnapshot>() {
-                                        @Override
-                                        public void onProgress(@NonNull @NotNull FileDownloadTask.TaskSnapshot snapshot) {
-                                            double progressPercent = (100.00 * snapshot.getBytesTransferred() / snapshot.getTotalByteCount());
-                                            if (progressPercent <= 90) {
-                                                pd.setMessage("Progreso: " + (int) progressPercent + "%");
-                                            } else {
-                                                pd.setMessage("Descargado. Espera unos instantes mientras el mapa se guarda en el dispositivo");
-                                            }
-                                        }
-                                    });
-                        } catch (IOException e) {
-                            pd.dismiss();
-                            showSnackBar("Algo salió mal al cargar el mapa. Sal y vuelve a intentarlo.");
+    private void loadTemplateFromFirestore() {
+        db.collection("templates").document(activity.getTemplate())
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        Template template = documentSnapshot.toObject(Template.class);
+                        if (template == null) {
+                            showErrorAndReturn("Algo salió mal al cargar la actividad. Sal y vuelve a intentarlo");
+                            return;
                         }
-                    }
-                } else if(activity.getParticipants().contains(userID)) {
-                    // if current user is a participant
-                    switch (participation.getState()) {
-                        case NOT_YET:
-                            break;
-                        case NOW:
-                            if (!LocationService.executing) {
-                                // if the service is not being executed now, show dialog to alert
-                                new MaterialAlertDialogBuilder(NowActivity.this)
-                                        .setTitle("Aviso sobre el mapa")
-                                        .setMessage("Esta acción te mostrará el mapa de la actividad, pero " +
-                                                "el servicio que rastrea tu ubicación no está activo, por lo que" +
-                                                " no se registrará tu paso por las balizas. Si lo que quieres es retomar " +
-                                                "la actividad, cancela esta acción y pulsa el botón de Continuar")
-                                        .setNegativeButton("Cancelar", null)
-                                        .setPositiveButton("Ver mapa", new DialogInterface.OnClickListener() {
-                                            @Override
-                                            public void onClick(DialogInterface dialog, int which) {
-                                                if (mapDownloaded()) {
-                                                    updateUIMap();
-                                                } else {
-                                                    // if for some reason the map is not downloaded then
-                                                    // show the download button instead and warn the user
-                                                    nowParticipant_extendedFab.setVisibility(View.GONE);
-                                                    nowParticipant_extendedFab.setEnabled(false);
-                                                    nowDownloadMap_extendedFab.setEnabled(true);
-                                                    nowDownloadMap_extendedFab.setVisibility(View.VISIBLE);
-                                                    showSnackBar("El mapa no está descargado. Descárgalo y vuelve a intentarlo");
-                                                    nowMap_button.setVisibility(View.GONE);
-                                                    nowMap_button.setEnabled(false);
-                                                }
-                                            }
-                                        })
-                                        .show();
-                            } else {
-                                // if the service is being executed now
-                                if (mapDownloaded()) {
-                                    updateUIMap();
-                                } else {
-                                    // if for some reason the map is not downloaded then
-                                    // show the download button instead and warn the user
-                                    nowParticipant_extendedFab.setVisibility(View.GONE);
-                                    nowParticipant_extendedFab.setEnabled(false);
-                                    nowDownloadMap_extendedFab.setEnabled(true);
-                                    nowDownloadMap_extendedFab.setVisibility(View.VISIBLE);
-                                    showSnackBar("El mapa no está descargado. Descárgalo y vuelve a intentarlo");
-                                    nowMap_button.setVisibility(View.GONE);
-                                    nowMap_button.setEnabled(false);
-                                }
-                            }
-                            break;
-                        case FINISHED:
-                            if (mapDownloaded()) {
-                                updateUIMap();
-                            } else {
-                                // if for some reason the map is not downloaded then
-                                // show the download button instead and warn the user
-                                nowParticipant_extendedFab.setVisibility(View.GONE);
-                                nowParticipant_extendedFab.setEnabled(false);
-                                nowDownloadMap_extendedFab.setEnabled(true);
-                                nowDownloadMap_extendedFab.setVisibility(View.VISIBLE);
-                                showSnackBar("El mapa no está descargado. Descárgalo y vuelve a intentarlo");
-                                nowMap_button.setVisibility(View.GONE);
-                                nowMap_button.setEnabled(false);
-                            }
-                            break;
-                    }
-                }
-            }
-        });
 
-        // credentials button listener
-        nowCredentials_button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                new MaterialAlertDialogBuilder(NowActivity.this)
-                        .setTitle("Claves de acceso a la actividad")
-                        .setMessage("Identificador: " + activity.getVisible_id() +
-                                "\nContraseña: " + activity.getKey())
-                        .setPositiveButton("OK", null)
-                        .show();
+                        // Guardar localmente para próximas veces
+                        saveTemplateLocally(template);
+
+                        // Actualizar UI
+                        updateTemplateUI(template);
+                    } else {
+                        showErrorAndReturn("La plantilla no existe en la base de datos");
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("TemplateLoad", "Error al cargar plantilla", e);
+                    showErrorAndReturn("Algo salió mal al cargar la actividad. Sal y vuelve a intentarlo");
+                });
+    }
+
+    private void updateTemplateUI(Template template) {
+        runOnUiThread(() -> {
+            this.template = template;
+
+            nowType_textView.setText(template.getType().toString());
+            if (template.getType() == TemplateType.EDUCATIVA && template.getColor() != null) {
+                nowType_textView.append(" " + template.getColor());
             }
+            nowDescription_textView.setText(template.getDescription());
+            nowTemplate_textView.append(template.getName());
+            nowLocation_textView.append(template.getLocation());
+            nowNorms_textView.setText(template.getNorms());
+
+            setupRoleSpecificUI();
+            loadOrganizerData();
         });
     }
 
+    private void saveTemplateLocally(Template template) {
+        new Thread(() -> {
+            try {
+                localDb.templateDao().insertTemplate(Converters.toEntity(template));
+                Log.d("TemplateSave", "Plantilla guardada localmente: " + template.getTemplate_id());
+            } catch (Exception e) {
+                Log.e("TemplateSave", "Error al guardar plantilla localmente", e);
+            }
+        }).start();
+    }
+
+    private void setupRoleSpecificUI() {
+        if (isOrganizer) {
+            setupOrganizerUI();
+        } else {
+            setupParticipantUI();
+        }
+    }
+
+    private void setupOrganizerUI() {
+        nowParticipant_extendedFab.setEnabled(false);
+        nowParticipant_extendedFab.setVisibility(View.GONE);
+        nowState_textView.setVisibility(View.GONE);
+
+        nowCredentials_button.setEnabled(true);
+        nowCredentials_button.setVisibility(View.VISIBLE);
+        nowMap_button.setEnabled(true);
+        nowMap_button.setVisibility(View.VISIBLE);
+
+        if (activityTime == ActivityTime.PAST && template.getType() == TemplateType.DEPORTIVA) {
+            nowSeeParticipants_extendedFab.setText("Clasificación");
+            nowSeeParticipants_extendedFab.setIcon(getResources().getDrawable(R.drawable.ic_trophy));
+        }
+
+        nowSeeParticipants_extendedFab.setEnabled(true);
+        nowSeeParticipants_extendedFab.setVisibility(View.VISIBLE);
+    }
+
+    private void setupParticipantUI() {
+        nowCredentials_button.setEnabled(false);
+        nowCredentials_button.setVisibility(View.GONE);
+
+        switch (activityTime) {
+            case PAST:
+                if (template.getType() == TemplateType.DEPORTIVA) {
+                    nowSeeParticipants_extendedFab.setText("Clasificación");
+                    nowSeeParticipants_extendedFab.setIcon(getResources().getDrawable(R.drawable.ic_trophy));
+                    nowSeeParticipants_extendedFab.setEnabled(true);
+                    nowSeeParticipants_extendedFab.setVisibility(View.VISIBLE);
+                }
+                nowParticipant_extendedFab.setEnabled(false);
+                nowParticipant_extendedFab.setVisibility(View.GONE);
+                nowState_textView.setVisibility(View.GONE);
+                break;
+            case ONGOING:
+            case FUTURE:
+                nowSeeParticipants_extendedFab.setEnabled(false);
+                nowSeeParticipants_extendedFab.setVisibility(View.GONE);
+                if (activityTime == ActivityTime.FUTURE) {
+                    nowParticipant_extendedFab.setEnabled(false);
+                    nowParticipant_extendedFab.setVisibility(View.GONE);
+                    nowState_textView.setVisibility(View.GONE);
+                }
+                break;
+        }
+
+        setupParticipationListener();
+    }
+
+    private void setupParticipationListener() {
+        // Verificar si hay conexión a internet
+        if (isOnline()) {
+            setupFirestoreParticipationListener();
+        } else {
+            setupLocalParticipationObserver();
+        }
+    }
+
+    private void setupFirestoreParticipationListener() {
+        db.collection("activities").document(activity.getId())
+                .collection("participations").document(userID)
+                .addSnapshotListener((snapshot, e) -> {
+                    if (e != null) {
+                        Log.e("ParticipationListener", "Error en listener", e);
+                        checkLocalParticipation(); // Fallback a datos locales
+                        return;
+                    }
+
+                    if (snapshot == null || !snapshot.exists()) {
+                        checkLocalParticipation(); // Fallback a datos locales
+                        return;
+                    }
+
+                    participation = snapshot.toObject(Participation.class);
+                    saveParticipationLocally(participation);
+                    updateParticipationUI();
+                });
+    }
+
+    private void setupLocalParticipationObserver() {
+        new Thread(() -> {
+            OfflineParticipation localParticipation = localDb.participationDao()
+                    .getParticipation(userID, activity.getId());
+
+            runOnUiThread(() -> {
+                if (localParticipation != null) {
+                    participation = toModel(localParticipation);
+                    updateParticipationUI();
+                } else {
+                    // Mostrar estado por defecto o mensaje de no participación
+                    nowDownloadMap_extendedFab.setEnabled(false);
+                    nowDownloadMap_extendedFab.setVisibility(View.GONE);
+                    Toast.makeText(this, "Modo offline - Sin datos de participación local",
+                            Toast.LENGTH_SHORT).show();
+                }
+            });
+        }).start();
+    }
+
+    private void checkLocalParticipation() {
+        new Thread(() -> {
+            OfflineParticipation localParticipation = localDb.participationDao()
+                    .getParticipation(userID, activity.getId());
+
+            runOnUiThread(() -> {
+                if (localParticipation != null) {
+                    participation = toModel(localParticipation);
+                    updateParticipationUI();
+                }
+            });
+        }).start();
+    }
+
+    private void updateParticipationUI() {
+        if (activityTime == ActivityTime.ONGOING) {
+            if (mapDownloaded()) {
+                enableRightParticipantOptions();
+            } else {
+                nowDownloadMap_extendedFab.setEnabled(true);
+                nowDownloadMap_extendedFab.setVisibility(View.VISIBLE);
+                updateParticipationStateUI();
+            }
+        } else {
+            enableRightParticipantOptions();
+        }
+    }
+
+    private void saveParticipationLocally(Participation participation) {
+        new Thread(() -> {
+            OfflineParticipation entity = toEntity(participation);
+            localDb.participationDao().insertParticipation(entity);
+        }).start();
+    }
+
+    private void updateParticipationStateUI() {
+        if (participation == null) return;
+
+        switch (participation.getState()) {
+            case NOT_YET:
+                nowState_textView.setText("Estado: no comenzada");
+                break;
+            case NOW:
+                nowState_textView.setText("Estado: aún no terminada");
+                break;
+            case FINISHED:
+                nowState_textView.setText("Estado: terminada");
+                break;
+        }
+    }
+
+    private void loadOrganizerData() {
+        db.collection("users").document(organizerID)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    user = documentSnapshot.toObject(User.class);
+                    if (user != null) {
+                        nowOrganizer_textView.append(user.getName() + " " + user.getSurname());
+                    }
+                });
+    }
+
+    private void checkLocationPermissions() {
+        if (!isOrganizer &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, FINE_LOCATION_ACCESS_REQUEST_CODE);
+        } else {
+            havePermissions = true;
+        }
+    }
+
+    private void setupListeners() {
+        nowParticipant_extendedFab.setOnClickListener(v -> handleParticipantFabClick());
+        nowSeeParticipants_extendedFab.setOnClickListener(v -> handleSeeParticipantsClick());
+        nowDownloadMap_extendedFab.setOnClickListener(v -> handleDownloadMapClick());
+        nowMap_button.setOnClickListener(v -> handleMapButtonClick());
+        nowCredentials_button.setOnClickListener(v -> showCredentialsDialog());
+    }
+
+    private void handleParticipantFabClick() {
+        if (!havePermissions) {
+            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, FINE_LOCATION_ACCESS_REQUEST_CODE);
+            return;
+        }
+
+        Date current_time = new Date();
+        if (current_time.after(activity.getFinishTime())) {
+            nowParticipant_extendedFab.setEnabled(false);
+            nowParticipant_extendedFab.setVisibility(View.GONE);
+            showSnackBar("Esta actividad ya ha terminado");
+            return;
+        }
+
+        new MaterialAlertDialogBuilder(this)
+                .setMessage("¿Deseas comenzar/retomar la actividad? Solo deberías " +
+                        "hacerlo si el/la organizador/a ya te ha dado la salida")
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Comenzar", (dialog, which) -> startActivityWithLocationCheck())
+                .show();
+    }
+
+    private void startActivityWithLocationCheck() {
+        now_progressIndicator.setVisibility(View.VISIBLE);
+        Log.v("Continuar","Entrando");
+        try {
+            fusedLocationClient.getLastLocation()
+                    .addOnSuccessListener(this, location -> {
+                        Log.v("Continuar","En getLastLocation");
+                        if (location == null) {
+                            now_progressIndicator.setVisibility(View.GONE);
+
+                            Toast.makeText(this, "Hubo algún problema al obtener la ubicación. Vuelve a intentarlo.", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        float diff = getDistance(location.getLatitude(), template.getStart_lat(),
+                                location.getLongitude(), template.getStart_lng());
+
+                        if ((diff <= LOCATION_PRECISION && participation.getState() == ParticipationState.NOT_YET)
+                                || participation.getState() == ParticipationState.NOW) {
+                            handleValidLocation();
+                        } else {
+                            now_progressIndicator.setVisibility(View.GONE);
+                            showSnackBar("Estás demasiado lejos de la salida (" + (int) diff + "). Acércate a ella y vuelve a intentarlo");
+                        }
+                    });
+        } catch (SecurityException e) {
+            now_progressIndicator.setVisibility(View.GONE);
+            showSnackBar("Parece que hay algún problema con los permisos de ubicación");
+        }
+    }
+
+    private void handleValidLocation() {
+        Log.v("Continuar","En handleValidLocation");
+        StorageReference reference = storageReference.child("maps/" + activity.getTemplate() + ".png");
+        if (LocationService.executing) {
+            now_progressIndicator.setVisibility(View.GONE);
+            Log.v("Continuar","En locationServiceExecuting");
+            Toast.makeText(this, "No se pudo iniciar la actividad... ya hay un servicio ejecutándose", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        switch (participation.getState()) {
+            case NOT_YET:
+                updateParticipationStartTime();
+                Log.v("Continuar","En notyet");
+                break;
+            case NOW:
+                Log.v("Continuar","En Now");
+                startLocationService();
+                updateUIMap();
+                break;
+            default:
+                Log.v("Continuar","En default");
+                now_progressIndicator.setVisibility(View.GONE);
+                Toast.makeText(this, "Parece que la actividad ya ha terminado", Toast.LENGTH_SHORT).show();
+                break;
+        }
+    }
+
+    private void updateParticipationStartTime() {
+        Date current_time = new Date();
+
+        // Crear los datos que necesitamos pasar al worker
+        Data inputData = new Data.Builder()
+                .putString("activityId", activity.getId())
+                .putString("userId", userID)
+                .putLong("currentTime", current_time.getTime())
+                .build();
+
+        // Construir la solicitud de trabajo con restricción de red
+        OneTimeWorkRequest uploadRequest = new OneTimeWorkRequest.Builder(ParticipationUpdateWorker.class)
+                .setInputData(inputData)
+                .setConstraints(new Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build())
+                .build();
+
+        // Programar el trabajo
+        WorkManager.getInstance(this).enqueue(uploadRequest);
+
+        // Mostrar progreso y deshabilitar botones inmediatamente (feedback UX)
+        now_progressIndicator.setVisibility(View.GONE);
+        nowParticipant_extendedFab.setEnabled(false);
+        nowParticipant_extendedFab.setVisibility(View.GONE);
+        startLocationService();
+        nowMap_button.setEnabled(true);
+        nowMap_button.setVisibility(View.VISIBLE);
+        updateUIMap();
+        new Thread(() -> {
+            localDb.participationDao().updateParticipationState(participation.getParticipant(), activity.getId(), ParticipationState.NOW);
+            localDb.participationDao().updateParticipationStartTime(participation.getParticipant(), activity.getId(), current_time);
+        }).start();
+    }
+
+    private void startLocationService() {
+        locationServiceIntent.putExtra("activity", activity);
+        locationServiceIntent.putExtra("template", template);
+        Log.v("Continuar","En startlocation service");
+        startService(locationServiceIntent);
+        Log.v("Continuar","tras startlocation service");
+    }
+
+    private void handleSeeParticipantsClick() {
+        if (template == null || activity == null) {
+            Toast.makeText(this, "No se pudo completar la acción. Sal y vuelve a intentarlo", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (mapDownloaded()) {
+            updateUIParticipants();
+        } else {
+            downloadMapAndUpdateParticipants();
+        }
+    }
+
+    private void downloadMapAndUpdateParticipants() {
+        ProgressDialog pd = new ProgressDialog(this);
+        pd.setTitle("Cargando el mapa...");
+        pd.show();
+
+        StorageReference reference = storageReference.child("maps/" + activity.getTemplate() + ".png");
+        try {
+            File localFile = File.createTempFile("images", "png");
+            reference.getFile(localFile)
+                    .addOnSuccessListener(taskSnapshot -> handleMapDownloadSuccess(localFile, pd, this::updateUIParticipants))
+                    .addOnFailureListener(e -> {
+                        pd.dismiss();
+                        showSnackBar("Algo salió mal al cargar el mapa. Sal y vuelve a intentarlo.");
+                    })
+                    .addOnProgressListener(snapshot -> updateProgressDialog(pd, snapshot));
+        } catch (IOException e) {
+            pd.dismiss();
+            showSnackBar("Algo salió mal al cargar el mapa. Sal y vuelve a intentarlo.");
+        }
+    }
+
+    private void handleDownloadMapClick() {
+        ProgressDialog pd = new ProgressDialog(this);
+        pd.setTitle("Cargando el mapa...");
+        pd.show();
+
+        StorageReference reference = storageReference.child("maps/" + activity.getTemplate() + ".png");
+        try {
+            File localFile = File.createTempFile("images", "png");
+            reference.getFile(localFile)
+                    .addOnSuccessListener(taskSnapshot -> handleMapDownloadSuccess(localFile, pd, () -> {
+                        showSnackBar("Mapa descargado con éxito, ya puedes comenzar la actividad");
+                        nowDownloadMap_extendedFab.setVisibility(View.GONE);
+                        nowDownloadMap_extendedFab.setEnabled(false);
+                        enableRightParticipantOptions();
+                    }))
+                    .addOnFailureListener(e -> {
+                        pd.dismiss();
+                        showSnackBar("Algo salió mal al cargar el mapa. Sal y vuelve a intentarlo.");
+                    })
+                    .addOnProgressListener(snapshot -> updateProgressDialog(pd, snapshot));
+        } catch (IOException e) {
+            pd.dismiss();
+            showSnackBar("Algo salió mal al cargar el mapa. Sal y vuelve a intentarlo.");
+        }
+    }
+
+    private void handleMapDownloadSuccess(File localFile, ProgressDialog pd, Runnable onSuccess) {
+        Bitmap bmp = BitmapFactory.decodeFile(localFile.getAbsolutePath());
+        ContextWrapper cw = new ContextWrapper(getApplicationContext());
+        File directory = cw.getDir("imageDir", Context.MODE_PRIVATE);
+        File mypath = new File(directory, activity.getTemplate() + ".png");
+
+        try (FileOutputStream fos = new FileOutputStream(mypath)) {
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, fos);
+            onSuccess.run();
+        } catch (Exception e) {
+            e.printStackTrace();
+            showSnackBar("Algo salió mal al cargar el mapa. Sal y vuelve a intentarlo.");
+        } finally {
+            pd.dismiss();
+        }
+    }
+
+    private void updateProgressDialog(ProgressDialog pd, FileDownloadTask.TaskSnapshot snapshot) {
+        double progressPercent = (100.00 * snapshot.getBytesTransferred() / snapshot.getTotalByteCount());
+        if (progressPercent <= 90) {
+            pd.setMessage("Progreso: " + (int) progressPercent + "%");
+        } else {
+            pd.setMessage("Descargado. Espera unos instantes mientras el mapa se guarda en el dispositivo");
+        }
+    }
+
+    private void handleMapButtonClick() {
+        if (activity.getPlanner_id().equals(userID)) {
+            handleOrganizerMapButton();
+        } else if (activity.getParticipants().contains(userID)) {
+            handleParticipantMapButton();
+        }
+    }
+
+    private void handleOrganizerMapButton() {
+        if (mapDownloaded()) {
+            updateUIOrganizerMap();
+        } else {
+            downloadMapAndUpdateOrganizerMap();
+        }
+    }
+
+    private void downloadMapAndUpdateOrganizerMap() {
+        ProgressDialog pd = new ProgressDialog(this);
+        pd.setTitle("Cargando el mapa...");
+        pd.show();
+
+        StorageReference reference = storageReference.child("maps/" + activity.getTemplate() + ".png");
+        try {
+            File localFile = File.createTempFile("images", "png");
+            reference.getFile(localFile)
+                    .addOnSuccessListener(taskSnapshot -> handleMapDownloadSuccess(localFile, pd, this::updateUIOrganizerMap))
+                    .addOnFailureListener(e -> {
+                        pd.dismiss();
+                        showSnackBar("Algo salió mal al cargar el mapa. Sal y vuelve a intentarlo.");
+                    })
+                    .addOnProgressListener(snapshot -> updateProgressDialog(pd, snapshot));
+        } catch (IOException e) {
+            pd.dismiss();
+            showSnackBar("Algo salió mal al cargar el mapa. Sal y vuelve a intentarlo.");
+        }
+    }
+
+    private void handleParticipantMapButton() {
+        if (participation == null) return;
+
+        switch (participation.getState()) {
+            case NOT_YET:
+                break;
+            case NOW:
+                if (!LocationService.executing) {
+                    showMapWarningDialog();
+                } else if (mapDownloaded()) {
+                    updateUIMap();
+                } else {
+                    handleMissingMap();
+                }
+                break;
+            case FINISHED:
+                if (mapDownloaded()) {
+                    updateUIMap();
+                } else {
+                    handleMissingMap();
+                }
+                break;
+        }
+    }
+
+    private void showMapWarningDialog() {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Aviso sobre el mapa")
+                .setMessage("Esta acción te mostrará el mapa de la actividad, pero " +
+                        "el servicio que rastrea tu ubicación no está activo, por lo que" +
+                        " no se registrará tu paso por las balizas. Si lo que quieres es retomar " +
+                        "la actividad, cancela esta acción y pulsa el botón de Continuar")
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Ver mapa", (dialog, which) -> {
+                    if (mapDownloaded()) {
+                        updateUIMap();
+                    } else {
+                        handleMissingMap();
+                    }
+                })
+                .show();
+    }
+
+    private void handleMissingMap() {
+        nowParticipant_extendedFab.setVisibility(View.GONE);
+        nowParticipant_extendedFab.setEnabled(false);
+        nowDownloadMap_extendedFab.setEnabled(true);
+        nowDownloadMap_extendedFab.setVisibility(View.VISIBLE);
+        showSnackBar("El mapa no está descargado. Descárgalo y vuelve a intentarlo");
+        nowMap_button.setVisibility(View.GONE);
+        nowMap_button.setEnabled(false);
+    }
+
+    private void showCredentialsDialog() {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Claves de acceso a la actividad")
+                .setMessage("Identificador: " + activity.getVisible_id() +
+                        "\nContraseña: " + activity.getKey())
+                .setPositiveButton("OK", null)
+                .show();
+    }
+
+    // Navigation Methods
     private void updateUIOrganizerMap() {
-        Intent intent = new Intent(NowActivity.this, OrganizerMapActivity.class);
+        Intent intent = new Intent(this, OrganizerMapActivity.class);
         intent.putExtra("activity", activity);
         intent.putExtra("template", template);
         startActivity(intent);
     }
 
     private void updateUIParticipants() {
-        Intent intent = new Intent(NowActivity.this, VigilanciaActividadActivity.class);
+        Intent intent = activity.getFinishTime().toInstant().isBefore(new Date().toInstant()) ?
+                new Intent(this, ReviewActivity.class) :
+                new Intent(this, VigilanciaActividadActivity.class);
         intent.putExtra("activity", activity);
         intent.putExtra("template", template);
         startActivity(intent);
     }
 
     private void updateUIMap() {
-        Intent intent = new Intent(NowActivity.this, MapParticipantActivity.class);
+        Intent intent = new Intent(this, MapParticipantActivity.class);
         intent.putExtra("template", template);
         intent.putExtra("activity", activity);
         startActivity(intent);
     }
 
     private void updateUIHome() {
-        Intent intent = new Intent(NowActivity.this, HomeActivity.class);
+        Intent intent = new Intent(this, HomeActivity.class);
         startActivity(intent);
         finish();
     }
 
     private void updateUIMyParticipation() {
-        Intent intent = new Intent(NowActivity.this, MyParticipationActivity.class);
-        intent.putExtra("participation", participation);
+        Intent intent = new Intent(this, MyParticipationActivity.class);
+        Gson gson = new Gson();
+        intent.putExtra("participation", gson.toJson(participation));
         intent.putExtra("activity", activity);
         intent.putExtra("template", template);
         startActivity(intent);
     }
 
+    // Helper Methods
     private void showSnackBar(String message) {
         if (now_coordinatorLayout != null) {
             Snackbar.make(now_coordinatorLayout, message, Snackbar.LENGTH_LONG)
-                    .setAction("OK", new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            // Do nothing, just dismiss
-                        }
-                    })
+                    .setAction("OK", v -> {})
                     .setDuration(8000)
                     .show();
         } else {
@@ -824,200 +870,174 @@ public class NowActivity extends AppCompatActivity {
         }
     }
 
+    private void showErrorAndReturn(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch (requestCode) {
-            case FINE_LOCATION_ACCESS_REQUEST_CODE:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // user gave us the permission...
-                    havePermissions = true;
-                    Toast.makeText(this, "Ahora ya puedes usar toda la funcionalidad", Toast.LENGTH_SHORT).show();
-                } else {
-                    showSnackBar("Es necesario dar permiso para poder participar en la actividad");
-                }
+        if (requestCode == FINE_LOCATION_ACCESS_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                havePermissions = true;
+                Toast.makeText(this, "Ahora ya puedes usar toda la funcionalidad", Toast.LENGTH_SHORT).show();
+            } else {
+                showSnackBar("Es necesario dar permiso para poder participar en la actividad");
+            }
         }
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        if (activity != null && userID != null) {
-            if (!activity.getPlanner_id().equals(userID)) {
-                getMenuInflater().inflate(R.menu.now_overflow_menu, menu);
-                // check if we have to enable the abandon activity option
-                Date current_time = new Date(System.currentTimeMillis());
-                if(!current_time.after(activity.getStartTime())
-                        || !current_time.before(activity.getFinishTime())) {
-                    menu.getItem(1).setEnabled(false);
-                    menu.getItem(1).setVisible(false);
-                } else {
-                    menu.getItem(1).setEnabled(true);
-                    menu.getItem(1).setVisible(true);
-                }
-            } else {
-                getMenuInflater().inflate(R.menu.now_overflow_organizer_menu, menu);
-            }
-        } else {
+        if (activity == null || userID == null) {
             Toast.makeText(this, "Se produjo un error al carga las opciones del menú", Toast.LENGTH_SHORT).show();
+            return super.onCreateOptionsMenu(menu);
+        }
+
+        if (!activity.getPlanner_id().equals(userID)) {
+            getMenuInflater().inflate(R.menu.now_overflow_menu, menu);
+            Date current_time = new Date();
+            boolean isActivityOngoing = current_time.after(activity.getStartTime()) && current_time.before(activity.getFinishTime());
+            menu.getItem(1).setEnabled(isActivityOngoing);
+            menu.getItem(1).setVisible(isActivityOngoing);
+        } else {
+            getMenuInflater().inflate(R.menu.now_overflow_organizer_menu, menu);
         }
         return super.onCreateOptionsMenu(menu);
     }
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if (activity != null && userID != null) {
-            if (!activity.getPlanner_id().equals(userID)
-                    && participation != null) {
-                switch (item.getItemId()) {
-                    case R.id.participation_activity:
-                        updateUIMyParticipation();
-                        break;
-                    case R.id.quit_activity:
-                        abandonActivity();
-                        break;
-                    default:
-                        break;
-                }
-            } else if (activity.getPlanner_id().equals(userID)) {
-                switch (item.getItemId()) {
-                    case R.id.organizer_remove_activity:
-                        removeActivity();
-                        break;
-                    default:
-                        break;
-                }
+        if (activity == null || userID == null) return super.onOptionsItemSelected(item);
+
+        if (!activity.getPlanner_id().equals(userID) && participation != null) {
+            switch (item.getItemId()) {
+                case R.id.participation_activity:
+                    updateUIMyParticipation();
+                    break;
+                case R.id.quit_activity:
+                    abandonActivity();
+                    break;
+            }
+        } else if (activity.getPlanner_id().equals(userID)) {
+            if (item.getItemId() == R.id.organizer_remove_activity) {
+                removeActivity();
             }
         }
         return super.onOptionsItemSelected(item);
     }
 
     private void abandonActivity() {
-        new MaterialAlertDialogBuilder(NowActivity.this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle("Abandonar actividad")
                 .setMessage("¿Estás seguro/a de que quieres abandonar esta actividad en curso?")
                 .setNegativeButton("Cancelar", null)
-                .setPositiveButton("Sí", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        Date current_time = new Date(System.currentTimeMillis());
-                        if(current_time.after(activity.getStartTime())
-                                && current_time.before(activity.getFinishTime())
-                                && participation != null) {
-                            switch (participation.getState()) {
-                                case NOT_YET:
-                                    new MaterialAlertDialogBuilder(NowActivity.this)
-                                            .setTitle("La acción no se puede realizar")
-                                            .setMessage("Tu participación aún no ha comenzado. Si no quieres " +
-                                                    "tomar parte de la actividad, puedes desinscribirte en " +
-                                                    "Mi Participación")
-                                            .setPositiveButton("OK", null)
-                                            .show();
-                                    break;
-                                case NOW:
-                                    now_progressIndicator.setVisibility(View.VISIBLE);
-                                    db.collection("activities").document(activity.getId())
-                                            .collection("participations").document(userID)
-                                            .update("state", ParticipationState.FINISHED,
-                                                    "finishTime", current_time,
-                                                    "completed", false)
-                                            .addOnSuccessListener(new OnSuccessListener<Void>() {
-                                                @Override
-                                                public void onSuccess(Void unused) {
-                                                    now_progressIndicator.setVisibility(View.GONE);
-                                                    // once updated the document of the participation, check
-                                                    // if we also need to finish the service
-                                                    if(LocationService.executing) {
-                                                        stopService(new Intent(NowActivity.this, LocationService.class));
-                                                    }
-                                                    showSnackBar("Has abandonado la actividad.");
-                                                }
-                                            })
-                                            .addOnFailureListener(new OnFailureListener() {
-                                                @Override
-                                                public void onFailure(@NonNull @NotNull Exception e) {
-                                                    now_progressIndicator.setVisibility(View.GONE);
-                                                    Toast.makeText(NowActivity.this, "Algo salió mal al terminar la actividad. Vuelve a intentarlo.", Toast.LENGTH_SHORT).show();
-                                                }
-                                            });
-                                    break;
-                                case FINISHED:
-                                    Toast.makeText(NowActivity.this, "La acción no se pudo completar" +
-                                            " porque ya has terminado tu participación", Toast.LENGTH_SHORT).show();
-                                    break;
-                            }
-                        } else {
-                            // the activity is not on going any more
-                            Toast.makeText(NowActivity.this, "La acción no se pudo completar. ", Toast.LENGTH_SHORT).show();
-                        }
+                .setPositiveButton("Sí", (dialog, which) -> {
+                    Date current_time = new Date();
+                    if (!(current_time.after(activity.getStartTime()) || !current_time.before(activity.getFinishTime()) || participation == null)) {
+                        Toast.makeText(this, "La acción no se pudo completar. ", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    switch (participation.getState()) {
+                        case NOT_YET:
+                            showNotStartedDialog();
+                            break;
+                        case NOW:
+                            finishActivityParticipation(current_time);
+                            break;
+                        case FINISHED:
+                            Toast.makeText(this, "La acción no se pudo completar porque ya has terminado tu participación", Toast.LENGTH_SHORT).show();
+                            break;
                     }
                 })
                 .show();
     }
 
+    private void showNotStartedDialog() {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("La acción no se puede realizar")
+                .setMessage("Tu participación aún no ha comenzado. Si no quieres " +
+                        "tomar parte de la actividad, puedes desinscribirte en " +
+                        "Mi Participación")
+                .setPositiveButton("OK", null)
+                .show();
+    }
+
+    private void finishActivityParticipation(Date current_time) {
+        now_progressIndicator.setVisibility(View.VISIBLE);
+        db.collection("activities").document(activity.getId())
+                .collection("participations").document(userID)
+                .update("state", ParticipationState.FINISHED,
+                        "finishTime", current_time,
+                        "completed", false)
+                .addOnSuccessListener(unused -> {
+                    now_progressIndicator.setVisibility(View.GONE);
+                    if (LocationService.executing) {
+                        stopService(new Intent(this, LocationService.class));
+                    }
+                    showSnackBar("Has abandonado la actividad.");
+                })
+                .addOnFailureListener(e -> {
+                    now_progressIndicator.setVisibility(View.GONE);
+                    Toast.makeText(this, "Algo salió mal al terminar la actividad. Vuelve a intentarlo.", Toast.LENGTH_SHORT).show();
+                });
+    }
+
     private void removeActivity() {
-        new MaterialAlertDialogBuilder(NowActivity.this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle("Eliminar actividad")
                 .setMessage("Se borrará la actividad y todos sus datos. Los participantes tampoco " +
                         "podrán acceder a ella. ¿Estás seguro/a de que quieres continuar?")
                 .setNegativeButton("Cancelar", null)
-                .setPositiveButton("Sí", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        now_progressIndicator.setVisibility(View.VISIBLE);
-                        if (activity.getId() != null) {
-                            db.collection("activities").document(activity.getId())
-                                    .delete()
-                                    .addOnSuccessListener(new OnSuccessListener<Void>() {
-                                        @Override
-                                        public void onSuccess(Void unused) {
-                                            now_progressIndicator.setVisibility(View.GONE);
-                                            updateUIHome();
-                                        }
-                                    })
-                                    .addOnFailureListener(new OnFailureListener() {
-                                        @Override
-                                        public void onFailure(@NonNull @NotNull Exception e) {
-                                            now_progressIndicator.setVisibility(View.GONE);
-                                            Toast.makeText(NowActivity.this, "Se produjo un error al eliminar la actividad", Toast.LENGTH_SHORT).show();
-                                        }
-                                    });
-                        } else {
-                            Toast.makeText(NowActivity.this, "No se pudo eliminar la actividad. Sal y vuelve a intentarlo", Toast.LENGTH_SHORT).show();
-                        }
+                .setPositiveButton("Sí", (dialog, which) -> {
+                    now_progressIndicator.setVisibility(View.VISIBLE);
+                    if (activity.getId() == null) {
+                        Toast.makeText(this, "No se pudo eliminar la actividad. Sal y vuelve a intentarlo", Toast.LENGTH_SHORT).show();
+                        return;
                     }
+
+                    db.collection("activities").document(activity.getId())
+                            .delete()
+                            .addOnSuccessListener(unused -> {
+                                now_progressIndicator.setVisibility(View.GONE);
+                                updateUIHome();
+                            })
+                            .addOnFailureListener(e -> {
+                                now_progressIndicator.setVisibility(View.GONE);
+                                Toast.makeText(this, "Se produjo un error al eliminar la actividad", Toast.LENGTH_SHORT).show();
+                            });
                 })
                 .show();
     }
 
     private ActivityTime getActivityTime() {
-        ActivityTime activityTime = ActivityTime.FUTURE;
-        if (activity != null) {
-            Date current_date = new Date(System.currentTimeMillis());
-            if (activity.getStartTime().after(current_date)) {
-                activityTime = ActivityTime.FUTURE;
-            } else if (activity.getFinishTime().before(current_date)) {
-                activityTime = ActivityTime.PAST;
-            } else {
-                activityTime = ActivityTime.ONGOING;
-            }
+        if (activity == null) return ActivityTime.FUTURE;
+
+        Date current_date = new Date();
+        if (activity.getStartTime().after(current_date)) {
+            return ActivityTime.FUTURE;
+        } else if (activity.getFinishTime().before(current_date)) {
+            return ActivityTime.PAST;
+        } else {
+            return ActivityTime.ONGOING;
         }
-        return activityTime;
     }
 
-    // reckons the distance between two points in meters
     private float getDistance(double lat1, double lat2, double lng1, double lng2) {
-        double earthRadius = 6371000; //meters
+        double earthRadius = 6371000; // meters
         double dLat = Math.toRadians(lat2 - lat1);
         double dLng = Math.toRadians(lng2 - lng1);
-        double p = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
                 Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
                         Math.sin(dLng / 2) * Math.sin(dLng / 2);
-        double c = 2 * Math.atan2(Math.sqrt(p), Math.sqrt(1 - p));
-        float dist = (float) (earthRadius * c);
-        return dist;
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return (float) (earthRadius * c);
     }
 
     private void enableRightParticipantOptions() {
+        if (participation == null) return;
+
         switch (participation.getState()) {
             case NOT_YET:
                 nowState_textView.setText("Estado: no comenzada");
@@ -1029,49 +1049,74 @@ public class NowActivity extends AppCompatActivity {
                 break;
             case NOW:
                 nowState_textView.setText("Estado: aún no terminada");
-                // allow to click the see map button
                 nowMap_button.setEnabled(true);
                 nowMap_button.setVisibility(View.VISIBLE);
-                if (!LocationService.executing) {
-                    if (activityTime == ActivityTime.ONGOING) {
-                        nowParticipant_extendedFab.setEnabled(true);
-                        nowParticipant_extendedFab.setVisibility(View.VISIBLE);
-                        nowParticipant_extendedFab.setText("Continuar");
-                    }
+                if (!LocationService.executing && activityTime == ActivityTime.ONGOING) {
+                    nowParticipant_extendedFab.setEnabled(true);
+                    nowParticipant_extendedFab.setVisibility(View.VISIBLE);
+                    nowParticipant_extendedFab.setText("Continuar");
                 }
                 break;
             case FINISHED:
                 nowState_textView.setText("Estado: terminada");
-                // allow to click the see map button
                 nowMap_button.setEnabled(true);
                 nowMap_button.setVisibility(View.VISIBLE);
                 nowParticipant_extendedFab.setEnabled(false);
                 nowParticipant_extendedFab.setVisibility(View.GONE);
                 break;
-            default:
-                break;
         }
     }
 
     public boolean mapDownloaded() {
-        boolean res = false;
         ContextWrapper cw = new ContextWrapper(getApplicationContext());
         File directory = cw.getDir("imageDir", Context.MODE_PRIVATE);
-        //File mypath = new File(directory, activity.getId() + ".png");
         File mypath = new File(directory, activity.getTemplate() + ".png");
-        if (mypath.exists()) {
-            res = true;
-        }
-        return res;
+        return mypath.exists();
+    }
+    public Template convertToTemplate(OfflineTemplate entity){
+        Template template = new Template();
+        template.setTemplate_id(entity.templateId);
+        template.setName(entity.name);
+        template.setType(entity.type);
+        template.setColor(entity.color);
+        template.setLocation(entity.location);
+        template.setDescription(entity.description);
+        template.setNorms(entity.norms);
+        template.setMap_id(entity.mapId);
+        template.setStart_lat(entity.startLat);
+        template.setStart_lng(entity.startLng);
+        template.setEnd_lat(entity.endLat);
+        template.setEnd_lng(entity.endLng);
+        template.setBeacons(new ArrayList<>(entity.beacons));
+        template.setPassword(entity.password);
+        return template;
     }
 
-    // only for testing
-    /*private void deleteMap() {
-        ContextWrapper cw = new ContextWrapper(getApplicationContext());
-        File directory = cw.getDir("imageDir", Context.MODE_PRIVATE);
-        File mypath = new File(directory, activity.getId() + ".png");
-        if (mypath.exists()) {
-            mypath.delete();
-        }
-    }*/
+    public static Participation toModel(OfflineParticipation entity) {
+        Participation participation = new Participation();
+        participation.setParticipant(entity.participant);
+        participation.setState(entity.state);
+        participation.setStartTime(entity.startTime);
+        participation.setFinishTime(entity.finishTime);
+        participation.setCompleted(entity.completed);
+        participation.setReaches(new ArrayList<>(entity.reaches));
+        participation.setLastLocation(entity.lastLocation);
+        return participation;
+    }
+    public static OfflineParticipation toEntity(Participation participation) {
+        OfflineParticipation entity = new OfflineParticipation();
+        entity.participant=participation.getParticipant();
+        entity.state=participation.getState();
+        entity.startTime=participation.getStartTime();
+        entity.finishTime=participation.getFinishTime();
+        entity.completed=participation.isCompleted();
+        entity.reaches=participation.getReaches();
+        entity.lastLocation=participation.getLastLocation();
+        return entity;
+    }
+    private boolean isOnline() {
+        ConnectivityManager cm = (ConnectivityManager) this.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = cm.getActiveNetworkInfo();
+        return netInfo != null && netInfo.isConnectedOrConnecting();
+    }
 }

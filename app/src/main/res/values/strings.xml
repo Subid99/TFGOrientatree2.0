@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">OrientaTree</string>
+    <string name="app_name">OrientaTree 2.0</string>
     <string name="title_activity_main2">MainActivity</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
@@ -20,4 +20,8 @@
     <string name="title_activity_track">Map</string>
     <string name="title_activity_organizer_map">Map</string>
     <string name="title_activity_vigilancia">Vigilancia</string>
+    <string name="title_activity_participant2">ParticipantActivity2</string>
+    <string name="tab_text_1">Tab 1</string>
+    <string name="tab_text_2">Tab 2</string>
+    <string name="title_activity_aaaa">aaaaActivity</string>
 </resources>

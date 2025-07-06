@@ -76,10 +76,6 @@ public class OrganizerMapActivity extends AppCompatActivity implements OnMapRead
         //toolbar = findViewById(R.id.organizerMap_toolbar);
         organizerMapParticipants_fab = findViewById(R.id.organizerMapParticipants_fab);
 
-        // set the toolbar
-        setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-
         // get the activity
         Intent intent = getIntent();
         activity = (Activity) intent.getSerializableExtra("activity");
@@ -88,8 +84,8 @@ public class OrganizerMapActivity extends AppCompatActivity implements OnMapRead
         if(activity != null && template != null) {
             // if these attributes are not null, it means that we came from the now activity
             // in which case we should offer the option of watching the participants
-            organizerMapParticipants_fab.setEnabled(true);
-            organizerMapParticipants_fab.setVisibility(View.VISIBLE);
+            //organizerMapParticipants_fab.setEnabled(true);
+            //organizerMapParticipants_fab.setVisibility(View.VISIBLE);
         } // in other case, we come from the template and we don't have to give that option
 
         organizerMapParticipants_fab.setOnClickListener(new View.OnClickListener() {

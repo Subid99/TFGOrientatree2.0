@@ -19,6 +19,9 @@
         android:layout_marginEnd="8dp"
         android:background="@color/white"
         android:clickable="true"
+        android:focusable="true"
+        android:checkable="true"
+        android:checked="false"
         android:foreground="?attr/selectableItemBackground"
         app:cardCornerRadius="3dp"
         app:cardElevation="3dp"
@@ -47,7 +50,7 @@
                 android:textSize="20sp"
                 tools:text="Name" />
 
-            <!--TextView for displaying Email -->
+
 
             <TextView
                 android:id="@+id/EstadoParticipacion"
@@ -58,6 +61,15 @@
                 android:textSize="16sp"
                 tools:text="EstadoParticipacion" />
 
+            <TextView
+                android:id="@+id/Tiempo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/black"
+                android:textSize="10sp"
+                android:visibility="visible"
+                tools:text="Duración --:--:--" />
+            <!--TextView for displaying Email -->
             <TextView
                 android:id="@+id/Balizas"
                 android:layout_width="match_parent"

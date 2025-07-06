@@ -7,17 +7,26 @@ android:layout_width="match_parent"
 android:layout_height="wrap_content"
 android:gravity="center_vertical"
 android:orientation="horizontal"
-android:padding="10dp">
+>
 <TableRow
-    android:id="@+id/Row"
+    android:id="@+id/FilaBaliza"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+>
     <!--TextView for displaying Name -->
-
+    <TextView
+        android:id="@+id/NumeroBaliza"
+        android:layout_width="20pt"
+        android:layout_height="wrap_content"
+        android:layout_weight=".5"
+        android:gravity="center"
+        android:padding="8dp"
+        android:text="NBalizas"
+        android:textSize="20sp" />
     <!-- Columna 2 -->
     <TextView
         android:id="@+id/Nombre"
-        android:layout_width="50pt"
+        android:layout_width="60dp"
         android:layout_height="match_parent"
         android:layout_weight="2"
         android:gravity="center"
@@ -29,22 +38,24 @@ android:padding="10dp">
     <TextView
         android:id="@+id/EstadoBaliza"
         android:layout_width="50pt"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
+        android:layout_weight="2"
         android:gravity="center"
         android:padding="8dp"
         android:text="Estado"
-        android:textSize="20sp" />
+        android:textSize="15sp" />
 
     <!-- Columna 4 -->
     <TextView
-        android:id="@+id/NumeroBaliza"
-        android:layout_width="20pt"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
+        android:id="@+id/Llegada"
+        android:layout_width="50pt"
+        android:layout_height="match_parent"
+        android:layout_weight=".5"
         android:gravity="center"
         android:padding="8dp"
-        android:text="NBalizas"
-        android:textSize="20sp" />
+        android:text="--.--.--"
+        android:textSize="20sp"
+        android:visibility="visible"
+        tools:visibility="visible" />
 </TableRow>
 </TableLayout>

@@ -2,6 +2,7 @@ package com.smov.gabriel.orientatree.adapters;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -32,8 +33,15 @@ import com.smov.gabriel.orientatree.model.User;
 import com.smov.gabriel.orientatree.ui.fragments.PopUpBalizas;
 import com.tfg.marllor.orientatree.R;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 
 public class ReciclerCardsAdapter extends RecyclerView.Adapter<ReciclerCardsAdapter.MyViewHolder> {
     private ArrayList<Participation> emplist;
@@ -45,7 +53,8 @@ public class ReciclerCardsAdapter extends RecyclerView.Adapter<ReciclerCardsAdap
         this.template = template;
         this.activity = activity;
     }
-
+    String pattern = "HH:mm:ss";
+    DateFormat df = new SimpleDateFormat(pattern);
     // This method creates a new ViewHolder object for each item in the RecyclerView
     @Override
     public MyViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
@@ -84,7 +93,7 @@ public class ReciclerCardsAdapter extends RecyclerView.Adapter<ReciclerCardsAdap
                                 Glide.with(context)
                                         .load(ref)
                                         .diskCacheStrategy(DiskCacheStrategy.NONE ) // prevent caching
-                                        .skipMemoryCache(true) // prevent caching
+                                        .skipMemoryCache(false) // prevent caching
                                         .into(holder.participantImageView);
                             }
                         }
@@ -105,9 +114,10 @@ public class ReciclerCardsAdapter extends RecyclerView.Adapter<ReciclerCardsAdap
                             BeaconReached beaconReached = documentSnapshot.toObject(BeaconReached.class);
                             beaconsReached.add(beaconReached);
                         }
+                        Collections.sort(beaconsReached, new BeaconReached());
                         Collections.reverse(beaconsReached);
                         currentParticipation.setReaches(beaconsReached);
-                        holder.Balizas.setText(currentParticipation.getResults());
+                        holder.Balizas.setText(currentParticipation.obtenerResultados());
                     }
                 });
 
@@ -135,6 +145,27 @@ public class ReciclerCardsAdapter extends RecyclerView.Adapter<ReciclerCardsAdap
             holder.estadoParticipacion.setText("Sin Empezar");
             holder.estadoParticipacion.setTextColor(Color.RED);
         }
+        String Tiempo="Duración --:--:--";
+        if (currentParticipation.getStartTime() != null) {
+            Duration duration = Duration.between(currentParticipation.getStartTime().toInstant(),new Date().toInstant());
+            Log.v("duration",duration.toString());
+
+            LocalTime time = LocalTime.MIDNIGHT.plus(duration);
+
+            Log.v("duration",time.format(DateTimeFormatter.ofPattern("HH:mm:ss")));
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+            Tiempo = "Duración " + time.format(formatter);
+        }
+        if (currentParticipation.getFinishTime() != null) {
+            Log.v("durationFin",currentParticipation.getStartTime().toString());
+            Log.v("durationFin",currentParticipation.getFinishTime().toString());
+            Duration duration = Duration.between(currentParticipation.getStartTime().toInstant(),currentParticipation.getFinishTime().toInstant());
+            LocalTime time = LocalTime.MIDNIGHT.plus(duration);
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+            Tiempo = "Duración " + time.format(formatter);
+        }
+        holder.Tiempo.setText(Tiempo);
+        holder.Tiempo.setText(Tiempo);
     }
 
     // This class defines the ViewHolder object for each item in the RecyclerView
@@ -145,7 +176,7 @@ public class ReciclerCardsAdapter extends RecyclerView.Adapter<ReciclerCardsAdap
 
         TextView nombre;
         TextView estadoParticipacion;
-
+        TextView Tiempo;
         TextView Balizas;
         CardView Tarjeta;
         ImageView participantImageView;
@@ -157,6 +188,7 @@ public class ReciclerCardsAdapter extends RecyclerView.Adapter<ReciclerCardsAdap
 
             participantImageView = itemView.findViewById(R.id.imageViewParticipante);
             Tarjeta = itemView.findViewById(R.id.Tarjeto);
+            Tiempo = itemView.findViewById(R.id.Tiempo);
             nombre = itemView.findViewById(R.id.Nombre);
             estadoParticipacion = itemView.findViewById(R.id.EstadoParticipacion);
             Balizas = itemView.findViewById(R.id.Balizas);

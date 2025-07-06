@@ -1,16 +1,20 @@
 package com.smov.gabriel.orientatree.ui.fragments;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
+import androidx.appcompat.app.AppCompatActivity;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -30,14 +34,20 @@ import com.smov.gabriel.orientatree.model.Participation;
 import com.smov.gabriel.orientatree.model.Template;
 import com.smov.gabriel.orientatree.model.TemplateType;
 import com.smov.gabriel.orientatree.model.User;
+import com.smov.gabriel.orientatree.ui.ReviewActivity;
+import com.smov.gabriel.orientatree.ui.TrackActivity;
 import com.tfg.marllor.orientatree.R;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 
 public class PopUpBalizas {
     private String Titulo = "holaCaracola";
     private Participation Participacion;
+    String pattern = "HH:mm:ss";
+    DateFormat df = new SimpleDateFormat(pattern);
     FirebaseFirestore db;
     Activity activity;
     Template template;
@@ -84,7 +94,9 @@ public class PopUpBalizas {
         //Initialize the elements of our window, install the handler
 
         TextView test2 = popupView.findViewById(R.id.TituloPopup);
-
+        TextView Inicio = popupView.findViewById(R.id.Inicio);
+        TextView Fin = popupView.findViewById(R.id.Fin);
+        Button Track = popupView.findViewById(R.id.VerTrack);
         db.collection("users").document(Participacion.getParticipant())
                 .get()
                 .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
@@ -94,16 +106,21 @@ public class PopUpBalizas {
                         if(user != null) {
                             Titulo= user.getName();
                             test2.setText(Titulo);
+
                             Log.v("Lista",user.getName());
                         }
                     }
                 });
-
-
+        if (Participacion.getStartTime() != null) {
+            Inicio.setText("Inicio: " + df.format(Participacion.getStartTime()));
+        }
+        if (Participacion.getFinishTime() != null) {
+            Fin.setText("Fin: " + df.format(Participacion.getFinishTime()));
+        }
         ArrayList<BeaconReached> Balizasconseguidas = Participacion.getReaches();
 
         // Assign employeelist to ItemAdapter
-        ReciclerBalizaAdapter itemAdapter = new ReciclerBalizaAdapter(Balizasconseguidas,activity,template,Participacion.getParticipant());
+        ReciclerBalizaAdapter itemAdapter = new ReciclerBalizaAdapter(Balizasconseguidas,activity,template,Participacion);
         // Set the LayoutManager that
         // this RecyclerView will use.
         RecyclerView recyclerView = popupView.findViewById(R.id.recycleView);
@@ -121,6 +138,22 @@ public class PopUpBalizas {
                 popupWindow.dismiss();
                 return true;
             }
+        });
+        Track.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ArrayList<String> participante = new ArrayList<>();
+                participante.add(Participacion.getParticipant());
+                ArrayList<String> nombre = new ArrayList<>();
+                nombre.add(test2.getText().toString());
+                Intent intent = new Intent(view.getContext(), TrackActivity.class);
+                intent.putExtra("activity", activity);
+                intent.putExtra("template", template);
+                intent.putExtra("participantes",participante);
+                intent.putExtra("nombres",nombre);
+                view.getContext().startActivity(intent);
+            }
+
         });
     }
 

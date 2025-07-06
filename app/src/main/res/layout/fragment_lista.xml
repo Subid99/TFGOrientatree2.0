@@ -18,9 +18,11 @@
             android:id = "@+id/tablaMain">
 
             <!-- Encabezado de la tabla -->
+
+
             <TableRow
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="match_parent">
 
                 <!-- Columna 1 -->
                 <TextView
@@ -36,7 +38,7 @@
                 <!-- Columna 2 -->
                 <TextView
                     android:id="@+id/Nombre"
-                    android:layout_width="50pt"
+                    android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:layout_weight="2"
                     android:gravity="center"
@@ -66,7 +68,6 @@
                     android:text="Balizas"
                     android:textSize="20sp" />
             </TableRow>
-
 
             <TableLayout
                 android:orientation="vertical"
